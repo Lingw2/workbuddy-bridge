@@ -84,6 +84,22 @@ node bin/workbuddy-bridge.js doctor
 
 改渠道代码时，先确认上游接口形状 —— 参考实现可以看 dsh 插件的 `vendor/channel-pack/pack.js`（本机已安装的包里就有），但**不要直接依赖那个包**，它是别人的构建产物。
 
+## 聚合模型目录与一键登录
+
+`src/channels/` 里另外几个模块负责模型目录和登录：
+
+- `models.js` —— 每家的模型目录读取器（`MODEL_READERS`）。同样是**每家形状不同**：TRAE 的模型名在 `function_configs[].config_info_list[].config_name`，变体（`__max` / `__dev`）在 `model_detail_list[]`；MiniMax 的 `payload.providers` 是数组、`config.models` 是字典（id 取键）；Raccoon 的 id 取 `entry.name`；ZCode 的 `builtinModels` 可能是数组也可能是对象。
+- `vendors.js` —— 按模型名关键词归厂商（18 个厂商 + unknown）。改厂商表时注意顺序：`match` 是子串命中，命中不了才落到 unknown。
+- `chat.js` —— 各家推理端点。OpenAI 形状的走 `OPENAI_SERVICES`，Anthropic 形状的走 `ANTHROPIC_SERVICES`（要把 `content_block_delta` / `message_delta` 转回 OpenAI chunk），TRAE 走 SOLO 形状（content 必须是 block 数组、tool_calls 放 `function_call`、tool 的 parameters 是 JSON 字符串、模型名同时写进 `config_name` 和 `model`）。
+- `catalog.js` —— 把 WorkBuddy 与各家的模型合成一份目录，id 统一成 `服务/模型`。**id 会被小写化，但上游对大小写敏感**，所以条目里保留 `upstreamId`，发请求时用 `upstreamId`。
+- `login.js` —— 一键登录：本地起一个回环端口接回调，浏览器打开官网登录页，登录完成后把凭据读回来写进账号库。回调端口要随机，登录页要自己开（用户不一定装在默认浏览器）。
+
+几个坑：
+
+- **有些上游用 200 + JSON 错误体**（ZCode、MiniMax 的 `{"code":1005,"msg":"exceed quota limit"}`）表示失败，不读出来就会变成空回复。`readJsonError()` 专门处理这个。
+- **Qoder 与 Gemini 没有公开模型目录**，用内置兜底表；这两家即使没有账号也会出现在目录里（`BUILTIN_ONLY`）。
+- **TRAE 的模型只能在它自己列出的通道里调**，发到别的通道上游会返回 `4001 param is invalid`。目录条目里记着 channel，发请求时带上。
+
 ## 提交前自查
 
 ```bash

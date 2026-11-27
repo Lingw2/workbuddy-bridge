@@ -222,11 +222,13 @@ export class GatewayServer {
 
   /** The Codex-facing model list (OpenAI shape). */
   #codexRoster() {
-    return this.bridge.models.map((model) => ({
+    const catalog = this.bridge.catalog?.visible?.() ?? []
+    const models = catalog.length > 0 ? catalog : this.bridge.models
+    return models.map((model) => ({
       id: model.id,
       object: 'model',
       created: 0,
-      owned_by: 'workbuddy',
+      owned_by: model.provider ?? 'workbuddy',
     }))
   }
 

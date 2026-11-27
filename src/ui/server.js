@@ -24,6 +24,7 @@ import { discoverSession, describeSession } from '../upstream/session.js'
 import { providerById, PROVIDER_ORDER } from '../channels/providers.js'
 import { probeAll } from '../channels/probe.js'
 import { openInBrowser } from '../config/browser.js'
+import { startLogin, loginStatus, takeLoginResult } from '../channels/login.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const INDEX_FILE = join(HERE, 'index.html')
@@ -111,7 +112,7 @@ export async function startUiServer({ app, port }) {
 
     if (url.pathname === '/api/models/refresh' && req.method === 'POST') {
       const models = await app.loadModels()
-      json(res, 200, { ok: true, models })
+      json(res, 200, { ok: true, models, catalog: await collectCatalog(app) })
       return
     }
 
@@ -270,6 +271,85 @@ export async function startUiServer({ app, port }) {
       return
     }
 
+    // Start the automatic sign-in of one service. The browser is opened by
+    // the flow itself, and the credential is picked up afterwards.
+    if (url.pathname === '/api/channels/login/start' && req.method === 'POST') {
+      const id = String((await readBody(req)).provider ?? '')
+      if (!providerById(id)) {
+        json(res, 404, { error: `unknown provider: ${id}` })
+        return
+      }
+      const result = startLogin(id)
+      json(res, 200, { ok: true, ...result })
+      return
+    }
+
+    // The state of the sign-in flows, plus the credentials that arrived.
+    if (url.pathname === '/api/channels/login/status' && req.method === 'GET') {
+      const status = loginStatus()
+      const added = []
+      for (const providerId of Object.keys(status.finished.reduce((acc, entry) => {
+        acc[entry.providerId] = true
+        return acc
+      }, {}))) {
+        const result = takeLoginResult(providerId)
+        if (!result?.credential) continue
+        try {
+          const account = app.channelAccounts.add({
+            provider: providerId,
+            accessToken:
+              result.credential.access_token ?? result.credential.zcode_jwt ?? '',
+            nickname: result.nickname,
+            extra: result.credential,
+          })
+          added.push({ providerId, id: account.id, nickname: account.nickname })
+          app.channels.invalidate()
+        } catch (error) {
+          app.logger.log(`[channels] could not store the login of ${providerId}: ${error.message}`)
+        }
+      }
+      json(res, 200, { ok: true, ...status, added })
+      return
+    }
+
+    // Switch one model of one service on or off.
+    if (url.pathname === '/api/channels/model/toggle' && req.method === 'POST') {
+      const body = await readBody(req)
+      const id = String(body.id ?? '')
+      const enabled = Boolean(body.enabled)
+      try {
+        const disabled = new Set(app.config.channels?.disabledModels ?? [])
+        if (enabled) disabled.delete(id)
+        else disabled.add(id)
+        app.updateConfig(mergeConfig(app.config, {
+          channels: { disabledModels: [...disabled] },
+        }))
+        json(res, 200, { ok: true, id, enabled })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
+    // The model one service should use.
+    if (url.pathname === '/api/channels/provider/model' && req.method === 'POST') {
+      const body = await readBody(req)
+      const id = String(body.id ?? '')
+      const model = String(body.model ?? '')
+      try {
+        const chosen = { ...(app.config.channels?.providerModels ?? {}) }
+        if (model) chosen[id] = model
+        else delete chosen[id]
+        app.updateConfig(mergeConfig(app.config, {
+          channels: { providerModels: chosen },
+        }))
+        json(res, 200, { ok: true, id, model })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
     if (url.pathname === '/api/channels/probe' && req.method === 'GET') {
       try {
         const result = await probeAll({
@@ -344,6 +424,7 @@ async function collectState(app) {
     ccSwitch,
     credit: await collectCredit(app),
     channels: await collectChannels(app),
+    catalog: await collectCatalog(app),
     channelAccounts: app.channelAccounts.list(),
     autoStart: app.autoStart
       ? { supported: true, enabled: await app.autoStart.isEnabled() }
@@ -391,7 +472,9 @@ function setDisabledAccounts(app, ids) {
   )
 }
 
-/** The credit state, without letting a billing failure break the page. */
+/**
+ * The credit state, without letting a billing failure break the page.
+ */
 async function collectCredit(app) {
   const settings = app.credit.settings
   try {
@@ -402,12 +485,27 @@ async function collectCredit(app) {
   }
 }
 
+/**
+ * The aggregate model directory, grouped by the company that made the models.
+ *
+ * @param {object} app
+ */
+async function collectCatalog(app) {
+  const groups = app.catalog.grouped()
+  return {
+    groups,
+    models: app.catalog.visible(),
+    all: app.catalog.list(),
+    settings: app.catalog.settings,
+  }
+}
+
 /** Install the bridge into one of the clients. */
 async function installTarget(app, target) {
   const config = app.config
   try {
     if (target === 'codex') {
-      const models = app.bridge.models.length ? app.bridge.models : await app.loadModels()
+      const models = await catalogModels(app)
       const result = installCodex(config, models)
       return { ok: true, target, ...result }
     }
@@ -422,7 +520,7 @@ async function installTarget(app, target) {
       return { ...result, target }
     }
     if (target === 'all') {
-      const models = app.bridge.models.length ? app.bridge.models : await app.loadModels()
+      const models = await catalogModels(app)
       const written = [
         installCodex(config, models).configPath,
         installClaudeCode(config),
@@ -435,6 +533,20 @@ async function installTarget(app, target) {
   } catch (error) {
     return { ok: false, target, error: error.message }
   }
+}
+
+/**
+ * The models the client may ask for.
+ *
+ * The WorkBuddy models come first, then the third-party ones the user may
+ * pick, so Codex knows every model it can use.
+ */
+async function catalogModels(app) {
+  if (!app.catalog?.list?.().length) await app.refreshCatalog()
+  const catalog = app.catalog.list()
+  const workbuddy = catalog.filter((model) => model.source === 'workbuddy')
+  const rest = catalog.filter((model) => model.source !== 'workbuddy')
+  return [...workbuddy, ...rest]
 }
 
 /** The configuration used when the CLI starts the tool. */

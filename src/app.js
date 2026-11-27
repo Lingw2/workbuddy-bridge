@@ -12,6 +12,7 @@ import { GatewayServer } from './gateway/server.js'
 import { CreditService } from './credit/service.js'
 import { AccountStore } from './channels/store.js'
 import { ChannelService } from './channels/service.js'
+import { ModelCatalog } from './channels/catalog.js'
 import { autoInstallClients } from './config/autoinstall.js'
 
 /** A logger that writes to the log file and the console. */
@@ -37,13 +38,18 @@ export class App {
   constructor(config = loadConfig()) {
     this.config = config
     this.logger = createLogger(config.logLevel)
-    this.bridge = new Bridge(config, this.logger)
-    /** The daily WorkBuddy credit claim. */
-    this.credit = new CreditService(config, this.logger)
     /** The accounts of the third-party channels. */
     this.channelAccounts = new AccountStore()
     /** The daily claim for the third-party channels. */
     this.channels = new ChannelService(config, this.logger, { store: this.channelAccounts })
+    /** One directory for the WorkBuddy models and the third-party ones. */
+    this.catalog = new ModelCatalog(config, this.logger, { store: this.channelAccounts })
+    this.bridge = new Bridge(config, this.logger, {
+      store: this.channelAccounts,
+      catalog: this.catalog,
+    })
+    /** The daily WorkBuddy credit claim. */
+    this.credit = new CreditService(config, this.logger)
     this.servers = []
     this.uiServer = null
     /** Ports served by a gateway this process did not start. */
@@ -121,10 +127,30 @@ export class App {
 
   /** Load the model directory, reporting failures without crashing. */
   async loadModels() {
+    let models = []
     try {
-      return await this.bridge.refreshModels()
+      models = await this.bridge.refreshModels()
     } catch (error) {
       this.logger.log(`[workbuddy] model directory unavailable: ${error.message}`)
+    }
+    await this.refreshCatalog(models)
+    return models
+  }
+
+  /**
+   * Rebuild the aggregate model directory.
+   *
+   * The WorkBuddy models come first, then every third-party service that has
+   * an account. A service that cannot be reached is left out instead of
+   * breaking the page.
+   *
+   * @param {object[]} [workbuddyModels]
+   */
+  async refreshCatalog(workbuddyModels = this.bridge.models) {
+    try {
+      return await this.catalog.refresh(workbuddyModels)
+    } catch (error) {
+      this.logger.log(`[catalog] model directory unavailable: ${error.message}`)
       return []
     }
   }
@@ -205,6 +231,7 @@ export class App {
     this.bridge.config = this.config
     this.credit.config = this.config
     this.channels.config = this.config
+    this.catalog.config = this.config
     return this.config
   }
 }

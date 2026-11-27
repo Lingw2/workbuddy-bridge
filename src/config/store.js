@@ -69,6 +69,10 @@ export const DEFAULTS = {
     disabledProviders: [],
     /** Accounts the user switched off. */
     disabledAccounts: [],
+    /** Single models the user switched off, addressed as `service/model`. */
+    disabledModels: [],
+    /** The model each service should use, addressed as `service/model`. */
+    providerModels: {},
   },
   logLevel: 'info',
 }
@@ -174,6 +178,12 @@ export function mergeConfig(current, patch) {
     }
     if (Array.isArray(patch.channels.disabledAccounts)) {
       next.channels.disabledAccounts = patch.channels.disabledAccounts.map((id) => String(id))
+    }
+    if (Array.isArray(patch.channels.disabledModels)) {
+      next.channels.disabledModels = patch.channels.disabledModels.map((id) => String(id))
+    }
+    if (patch.channels.providerModels && typeof patch.channels.providerModels === 'object') {
+      next.channels.providerModels = { ...current.channels.providerModels, ...patch.channels.providerModels }
     }
   }
   if (typeof patch.logLevel === 'string') next.logLevel = patch.logLevel

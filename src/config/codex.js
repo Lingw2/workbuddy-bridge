@@ -86,7 +86,7 @@ function catalogEntry(model, index, template) {
  * Write the Codex model catalogue.
  *
  * The file may already hold entries for other providers, so existing entries
- * are kept and only the WorkBuddy ones are replaced.
+ * are kept and only ours are replaced.
  *
  * @param {object[]} models
  */
@@ -104,12 +104,16 @@ export function writeCodexModelCatalog(models) {
   // Clone the shape of an entry Codex already understands.
   const template = existing[0]
 
-  // Drop the entries we are about to publish, keep everything else.
+  // Drop the entries we are about to publish, keep everything else. Our own
+  // entries are recognised by the `service/model` shape of their slug.
   const ids = new Set(models.map((model) => model.id))
-  const kept = existing.filter(
-    (entry) =>
-      !String(entry.slug ?? '').startsWith('workbuddy:') && !ids.has(String(entry.slug ?? '')),
-  )
+  const kept = existing.filter((entry) => {
+    const slug = String(entry.slug ?? '')
+    if (ids.has(slug)) return false
+    if (slug.startsWith('workbuddy:')) return false
+    if (slug.includes('/')) return false
+    return true
+  })
   const added = models.map((model, index) => catalogEntry(model, index, template))
   const merged = [...added, ...kept]
 

@@ -24,6 +24,10 @@ Windows 上是一个**桌面软件**：装完双击打开，配置界面在窗�
 
 ![第三方免费渠道](docs/channels-shot.png)
 
+所有渠道的模型汇总成一份目录，按厂商分组显示：
+
+![聚合模型目录](docs/catalog-shot.png)
+
 ---
 
 ## 特性
@@ -36,6 +40,9 @@ Windows 上是一个**桌面软件**：装完双击打开，配置界面在窗�
 - **cc-switch 保护** —— 如果你装了 cc-switch（会改写同一批配置文件的切换器），工具会注册自己为 provider 并设为当前，避免它把配置改回去。
 - **每天自动领积分** —— WorkBuddy 每天签到可以免费拿积分，工具能按你设定的时间自动签到、领取一次性活动、兑换连续签到阶梯。
 - **第三方免费渠道** —— LobsterAI、Qoder（国际/中国版）、TRAE、Cline、Loomy、Raccoon、MiniMax Code、ZCode、Gemini Code Assist 十个服务的账号集中管理：逐个开关应用、增删账号、每天自动领所有账号的额度，还能做连通测试和速度检测。
+- **聚合模型目录** —— WorkBuddy 加上十个第三方服务的模型收进一份目录（实测 162 个），按厂商（DeepSeek / 智谱 GLM / Kimi / 豆包 / Qwen / MiniMax / Gemini …）分组显示，模型下拉里能一眼看出是哪个厂商、哪个服务提供的。
+- **一键登录** —— 点某个服务的「一键登录」就打开官网登录页，登录完成后工具自己把凭据读回来，账号自动出现，不用手抄 token。
+- **每个服务单独选模型** —— 每个服务下面列着自己的模型，可以逐个禁用，也能指定这个服务默认用哪个模型。
 - **全自动客户端植入** —— 网关一启动就自己认出机器上装了哪些客户端并写好配置，新机器上不用手动点一遍。
 - **只读本机、回环地址** —— 网关只监听 127.0.0.1，拒绝非回环的 Host / Origin，带 Bearer 令牌。
 - **命令行同样可用** —— 桌面软件里改的东西，命令行都能改，两边共用同一套配置文件。
@@ -55,7 +62,7 @@ Windows 上是一个**桌面软件**：装完双击打开，配置界面在窗�
 
 ## 安装（Windows 桌面软件）
 
-1. 从 Releases 下载 `WorkBuddy-Bridge-Setup-<版本>.exe`（[v0.3.0](https://github.com/Lingw2/workbuddy-bridge/releases/tag/v0.3.0)）；
+1. 从 Releases 下载 `WorkBuddy-Bridge-Setup-<版本>.exe`（[v0.4.0](https://github.com/Lingw2/workbuddy-bridge/releases/tag/v0.4.0)）；
 2. 双击安装，可自选安装目录，会创建桌面和开始菜单快捷方式；
 3. 启动「WorkBuddy Bridge」，窗口里就是配置界面。
 
@@ -117,6 +124,7 @@ workbuddy-bridge start             # 只起网关
 workbuddy-bridge status            # 看运行状态和配置状态
 workbuddy-bridge doctor            # 自检：账号、客户端、配置、网关
 workbuddy-bridge models            # 列出账号可用的模型
+workbuddy-bridge catalog           # 列出所有服务的模型，按厂商分组
 workbuddy-bridge install           # 写配置（codex / claude-code / claude-desktop）
 workbuddy-bridge install codex cc-switch
 workbuddy-bridge uninstall         # 移除写入的配置
@@ -256,13 +264,41 @@ WorkBuddy 的积分走 `https://www.codebuddy.cn`（国际站是 `https://www.wo
 - **多账号**：每个服务可以加任意多个账号，「立即领取全部」会把所有服务的所有账号挨个领一遍；
 - **逐个删**：不想留的账号在界面上点「删除」即可，删掉的账号不会被「从其它插件导入」再带回来；
 - **可开关**：应用级别和账号级别都能停用，停用的不参与领取；
-- **登录跳转**：点「登录」直接用系统浏览器打开对应官网；
+- **一键登录**：点服务上的「一键登录」打开官网登录页，工具在后台守着回调，登录好了自动把账号收进来（账号行里不再有单独的登录按钮）。
 - **连通测试与速度检测**：每个账号连打三次取往返时间，分「很快 / 正常 / 偏慢 / 不通」；
 - **自动领取**：和 WorkBuddy 积分一样按本地日切分，同一天只跑一次，失败按 1/5/15/30/60 分钟退避。
 
 账号存在 `~/.workbuddy-bridge/channel-accounts.json`，领取状态存在 `~/.workbuddy-bridge/channel-claim-state.json`。
 
 ⚠️ **ZCode 的领取端点始终要人机验证**（上游返回 `captcha verify failed`，且校验在套餐检查之前），工具会明确提示「需要在官网手动领取」，不会去绕验证码。
+
+---
+
+### 7. 聚合模型目录
+
+WorkBuddy 的模型和十个第三方服务的模型收在同一份目录里。模型 id 用 `服务/模型` 的形式（`trae/deepseek-v4-pro`、`lobsterai/deepseek-v4-pro`），网关按前缀把它路由到对应服务：
+
+| 服务 | 模型目录来源 | 对话接口 |
+| --- | --- | --- |
+| WorkBuddy | `GET /v2/models`（账号目录） | `POST /v2/chat/completions` |
+| LobsterAI | `GET /api/models/available` | `POST /api/proxy/v1/chat/completions` |
+| Qoder / Qoder CN | 无公开目录，用内置兜底表 | — |
+| TRAE | `POST /api/ide/v1/batch_get_detail_param` | `POST /api/agent/v3/llm_utils_chat` |
+| Cline | `GET /api/v1/models` | `POST /api/v1/chat/completions` |
+| Loomy | `GET /models` | `POST /chat/completions` |
+| Raccoon | `GET /api/web/llm/v2/model_catalog` | `POST /api/web/llm/v2/chat/completions` |
+| MiniMax Code | `GET /mavis/api/v1/models` | `POST /mavis/api/v1/llm/v1/messages` |
+| ZCode | `GET /api/v1/client/configs` | `POST /api/v1/zcode-plan/anthropic/v1/messages` |
+| Gemini | 无公开目录，用内置兜底表 | — |
+
+界面上：
+
+- **模型下拉按厂商分组** —— `optgroup` 的标题就是厂商名，选项写成「模型名 · 服务/标识 — 来源服务」，例如 `DeepSeek-V4-Pro · trae/deepseek-v4-pro — TRAE（字节）`；
+- **厂商归属自动识别** —— 按模型名里的关键词归到 18 个已知厂商（DeepSeek、智谱 GLM、Kimi、豆包、Qwen、MiniMax、Gemini、Claude、GPT、MiMo、Step、日日新、星火…），认不出来的归到「其他厂商」；
+- **逐个禁用模型** —— 每个服务下面列着自己能用的模型，可以单独禁用（`config.channels.disabledModels`），也能整个服务关掉（`config.channels.disabledProviders`）；
+- **每个服务默认模型** —— `config.channels.providerModels` 指定某服务优先用哪个模型。
+
+各家的对话协议不一样（OpenAI 形状的、SOLO 形状的、Anthropic 形状的），工具在 `src/channels/chat.js` 里各自转换，上游报的错（比如 ZCode 的 `exceed quota limit`）会原样透出来。
 
 ---
 
@@ -289,6 +325,9 @@ WorkBuddy 的积分走 `https://www.codebuddy.cn`（国际站是 `https://www.wo
 - **积分活动以官方为准**。一次性活动（补偿 / 新人礼）由上游自己开关，工具只在上游说还开着的时候去领；连续签到阶梯只有满 7/14/28 天才解锁。工具不会绕过任何规则。
 - **ZCode 的每日领取要人机验证**，上游强制校验，工具会提示去官网手动领。
 - **Cline / Raccoon / Gemini 没有每日签到接口**，工具只查额度。Raccoon 的一次性登录奖励会去领。
+- **Qoder 与 Gemini 没有公开的模型目录接口**，工具用内置的兜底模型表；Qoder 中国版也没有可用的公开 OpenAI 兼容推理端点，所以它的模型只能看、不能调。
+- **Gemini 的「一键登录」需要你自己的 OAuth 凭据**。工具不内置 Google 的 client id / secret，请设置 `WORKBUDDY_BRIDGE_GEMINI_CLIENT_ID` 与 `WORKBUDDY_BRIDGE_GEMINI_CLIENT_SECRET`（用 Gemini 桌面应用自己那一套）。其它服务不需要额外配置。
+- **TRAE 的模型只能在它自己列出的通道里调用**，发到别的通道上游会拒绝；工具按模型目录里记录的通道发请求。
 - **安装包没有代码签名**，Windows SmartScreen 会提示未知发布者（见上面「Windows 提示『未知发布者』？」）。
 - 工具读写的是别人的账号数据，用在哪儿、怎么用，请自己判断。
 
@@ -297,7 +336,7 @@ WorkBuddy 的积分走 `https://www.codebuddy.cn`（国际站是 `https://www.wo
 ## 开发
 
 ```bash
-npm test                   # 协议转换 + 积分流程 + 第三方渠道的单元测试
+npm test                   # 协议转换 + 积分流程 + 第三方渠道 + 聚合目录的单元测试
 npm run smoke              # 对着真实网关跑一轮端到端
 npm run desktop            # 开发模式启动桌面软件
 npm run icon               # 重新生成图标
@@ -312,7 +351,7 @@ desktop/        Electron 桌面外壳：窗口、托盘、开机自启
 src/app.js      应用容器：网关、模型、积分、渠道、UI
 src/upstream/   WorkBuddy 上游：凭据、模型目录、SSE、积分接口
 src/credit/     每日自动领取积分：调度器、状态落盘
-src/channels/   第三方免费渠道：十个服务的接口、账号库、调度器、连通检测
+src/channels/   第三方免费渠道：签到、账号库、调度器、连通检测、模型目录、登录流程、目录聚合
 src/gateway/    协议转换层：Anthropic / Responses / 改写
 src/config/     客户端配置读写：Codex / Claude / cc-switch / TOML
 src/ui/         配置页（原生 HTML + JS，无构建步骤）

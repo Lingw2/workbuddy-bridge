@@ -187,7 +187,13 @@ async function commandModels() {
 async function commandInstall(targets) {
   const config = loadConfig()
   const app = new App(config)
-  const models = app.bridge.models.length ? app.bridge.models : await app.loadModels()
+  const workbuddy = app.bridge.models.length ? app.bridge.models : await app.loadModels()
+  // The catalogue holds the WorkBuddy models first and then every third-party
+  // model, so Codex learns about all of them.
+  const catalog = app.catalog.list()
+  const models = catalog.length
+    ? [...catalog.filter((model) => model.source === 'workbuddy'), ...catalog.filter((model) => model.source !== 'workbuddy')]
+    : workbuddy
 
   const list = targets.length ? targets : ['codex', 'claude-code', 'claude-desktop']
   for (const target of list) {
@@ -339,6 +345,27 @@ async function commandChannelsProbe() {
   console.log(`\n  reachable ${result.summary.reachable}/${result.summary.total}, average ${result.summary.averageMs} ms\n`)
 }
 
+/**
+ * `catalog`: the aggregate model directory, grouped by vendor.
+ */
+async function commandCatalog() {
+  const app = new App(loadConfig())
+  const workbuddy = app.bridge.models.length ? app.bridge.models : await app.loadModels()
+  await app.refreshCatalog(workbuddy)
+  const groups = app.catalog.grouped()
+
+  console.log('\n  Aggregate model catalogue\n  ──────────────────────────')
+  for (const group of groups) {
+    console.log(`\n  ${group.label} (${group.models.length})`)
+    for (const model of group.models) {
+      console.log(
+        `    ${model.id.padEnd(44)} ${String(model.name ?? '').padEnd(30)} ${model.providerLabel ?? ''}`,
+      )
+    }
+  }
+  console.log(`\n  ${app.catalog.list().length} models from ${groups.length} vendors\n`)
+}
+
 /** Run a command and keep the process alive for the long-running ones. */
 async function main() {
   const [command = 'ui', ...rest] = process.argv.slice(2)
@@ -354,6 +381,8 @@ async function main() {
       return commandDoctor()
     case 'models':
       return commandModels()
+    case 'catalog':
+      return commandCatalog()
     case 'install':
       return commandInstall(rest)
     case 'uninstall':
@@ -393,6 +422,7 @@ function readHelp() {
     status             show what is running and what is configured
     doctor             check the account, the clients and the configuration
     models             list the models your account can use
+    catalog            list every model of every service, grouped by vendor
     install [targets]  write the configuration into codex / claude-code /
                        claude-desktop (all three by default)
     uninstall [targets] remove the bridge configuration again
