@@ -97,10 +97,15 @@ const created = await api('/git/trees', {
   body: { base_tree: 'main', tree },
 })
 
+const commitMessage = execFileSync('git', ['log', '-1', '--pretty=%B'], {
+  cwd: ROOT,
+  encoding: 'utf8',
+}).trim()
+
 const commit = await api('/git/commits', {
   method: 'POST',
   body: {
-    message: 'chore: publish via the GitHub API',
+    message: commitMessage || 'chore: publish via the GitHub API',
     tree: created.sha,
     parents: [baseTree?.sha ?? (await api('/git/ref/heads/main')).object.sha],
   },
