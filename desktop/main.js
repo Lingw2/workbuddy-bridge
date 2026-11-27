@@ -49,7 +49,9 @@ async function startBridge() {
   })
   await bridge.startGateway()
   bridge.loadModels().catch(() => {})
+  bridge.autoInstallClients().catch(() => {})
   bridge.startCreditScheduler()
+  bridge.startChannelScheduler()
   bridge.uiServer = await startUiServer({ app: bridge, port: UI_PORT })
 }
 
@@ -62,7 +64,7 @@ function createWindow() {
     minHeight: 640,
     show: false,
     title: 'WorkBuddy Bridge',
-    backgroundColor: '#f6f7f5',
+    backgroundColor: '#0d0f0e',
     autoHideMenuBar: false,
     icon: path.join(HERE, 'icons', 'icon-256.png'),
     webPreferences: {

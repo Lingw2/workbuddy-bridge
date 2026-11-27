@@ -6,17 +6,18 @@
     <title>WorkBuddy Bridge</title>
     <style>
       :root {
-        --bg: #f6f7f5;
-        --surface: #ffffff;
-        --line: #dfe3dd;
-        --line-soft: #eceee9;
-        --text: #1b1f1c;
-        --muted: #6b736c;
-        --accent: #1f6f5c;
-        --accent-soft: #e4f0ec;
-        --ok: #1f6f5c;
-        --warn: #9a6512;
-        --err: #b4342b;
+        --bg: #0d0f0e;
+        --surface: #161a18;
+        --surface-2: #1c211e;
+        --line: #2a302c;
+        --line-soft: #232825;
+        --text: #e7ebe8;
+        --muted: #949d97;
+        --accent: #2f9e83;
+        --accent-soft: #16302a;
+        --ok: #46b98f;
+        --warn: #d0a44a;
+        --err: #e0685c;
         --radius: 8px;
       }
       * { box-sizing: border-box; }
@@ -42,7 +43,7 @@
       }
       header .logo {
         width: 26px; height: 26px; border-radius: 6px;
-        background: var(--accent); color: #fff;
+        background: var(--accent); color: #06110e;
         display: grid; place-items: center;
         font-weight: 700; font-size: 13px;
       }
@@ -79,7 +80,7 @@
       @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
 
       input[type="text"], input[type="number"], select {
-        background: #fff;
+        background: var(--surface-2);
         color: var(--text);
         border: 1px solid var(--line);
         border-radius: 6px;
@@ -93,24 +94,24 @@
       label.check { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; color: var(--muted); }
 
       button {
-        background: var(--accent); color: #fff; border: 0; border-radius: 6px;
+        background: var(--accent); color: #06110e; border: 0; border-radius: 6px;
         padding: 8px 15px; font: inherit; font-weight: 500; cursor: pointer;
       }
-      button:hover { background: #1a5c4d; }
-      button.ghost { background: #fff; border: 1px solid var(--line); color: var(--text); }
+      button:hover { background: #36b394; }
+      button.ghost { background: var(--surface-2); border: 1px solid var(--line); color: var(--text); }
       button.ghost:hover { background: var(--line-soft); }
       button.link {
         background: none; border: 0; color: var(--accent);
         padding: 2px 4px; font-weight: 500; text-decoration: underline;
       }
-      button.link:hover { background: none; color: #174f43; }
+      button.link:hover { background: none; color: #3fc0a0; }
       button:disabled { opacity: .5; cursor: default; }
 
       .status {
         display: inline-flex; align-items: center; gap: 7px;
         font-size: 13px; color: var(--muted);
       }
-      .dot { width: 7px; height: 7px; border-radius: 50%; background: #b6bdb6; flex: none; }
+      .dot { width: 7px; height: 7px; border-radius: 50%; background: #49514c; flex: none; }
       .dot.ok { background: var(--ok); }
       .dot.err { background: var(--err); }
       .dot.warn { background: var(--warn); }
@@ -133,7 +134,8 @@
       .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
       pre {
-        background: #1b1f1c; color: #cdd4ce; border-radius: 6px;
+        background: #0a0c0b; color: #b6c2ba; border-radius: 6px;
+        border: 1px solid var(--line-soft);
         padding: 12px 14px; overflow: auto; max-height: 240px; font-size: 12px;
         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         margin: 0;
@@ -141,10 +143,10 @@
 
       .toast {
         position: fixed; right: 24px; bottom: 24px; z-index: 50;
-        background: var(--surface); border: 1px solid var(--line);
+        background: var(--surface-2); border: 1px solid var(--line);
         border-left: 3px solid var(--accent);
         border-radius: 6px; padding: 10px 15px; max-width: 420px;
-        box-shadow: 0 6px 24px rgba(20, 30, 24, .12);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, .45);
         opacity: 0; transform: translateY(6px); transition: .16s; pointer-events: none;
       }
       .toast.show { opacity: 1; transform: none; }
@@ -287,6 +289,43 @@
           <button id="btnClaimNow">立即领取</button>
           <button class="ghost" id="btnCreditRefresh">刷新状态</button>
         </div>
+      </div>
+
+      <div class="block" id="channelsBlock">
+        <h2>第三方免费渠道</h2>
+        <p class="sub2">
+          这些服务每天都有免费额度。这里可以逐个开关应用、添加或删除账号，并一次性领取所有账号的每日额度。
+        </p>
+        <div class="stack">
+          <div class="row">
+            <div class="label">自动领取</div>
+            <div class="grow">
+              <label class="check"><input type="checkbox" id="channelsEnabled" /> 每天自动领取所有渠道的额度</label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="label">领取时间</div>
+            <div class="grow"><input type="text" id="channelsTime" placeholder="09:00" style="max-width:120px" /></div>
+            <div class="tail hint" style="margin:0">本地时间</div>
+          </div>
+          <div class="row">
+            <div class="label">一次性奖励</div>
+            <div class="grow">
+              <label class="check"><input type="checkbox" id="channelsBenefits" /> 同时领取新人奖励</label>
+            </div>
+          </div>
+        </div>
+
+        <div id="providerList" style="margin-top:18px"></div>
+
+        <div class="actions" style="margin-top:16px">
+          <button id="btnChannelsClaim">立即领取全部</button>
+          <button class="ghost" id="btnChannelsProbe">连通测试与速度检测</button>
+          <button class="ghost" id="btnChannelsImport">从其它插件导入账号</button>
+          <button class="ghost" id="btnChannelsRefresh">刷新状态</button>
+        </div>
+        <div id="probeBox" style="margin-top:14px"></div>
+        <div id="claimBox" style="margin-top:14px"></div>
       </div>
 
       <div class="block">
@@ -432,6 +471,118 @@
 
         $('logs').textContent = (state.logs ?? []).join('\n')
         renderCredit()
+        renderChannels()
+      }
+
+      /** The third-party channels block. */
+      function renderChannels() {
+        const channels = state.channels
+        const list = $('providerList')
+
+        if (!channels) {
+          list.innerHTML = `<p class="hint" style="margin:0">正在读取渠道状态…</p>`
+          return
+        }
+
+        const settings = channels.settings ?? state.config.channels ?? {}
+        $('channelsEnabled').checked = Boolean(settings.enabled)
+        if (document.activeElement !== $('channelsTime')) {
+          $('channelsTime').value = settings.time ?? '09:00'
+        }
+        $('channelsBenefits').checked = settings.autoBenefits !== false
+
+        const accounts = channels.accounts ?? []
+        const byAccount = new Map(accounts.map((entry) => [entry.id, entry]))
+
+        list.innerHTML = (channels.providers ?? [])
+          .map((provider) => {
+            const mine = (state.channelAccounts ?? []).filter((a) => a.provider === provider.id)
+            const rows = mine.length
+              ? mine.map((account) => {
+                  const live = byAccount.get(account.id)
+                  const checked = live?.checkin?.todayCheckedIn
+                  const balance = live?.balance?.total
+                  const speed = live?.speed
+                  return `<tr>
+                    <td>${account.nickname ?? account.id}</td>
+                    <td>${account.enabled === false ? '<span class="tag">已停用</span>' : '<span class="tag on">启用</span>'}</td>
+                    <td>${
+                      live?.error
+                        ? `<span style="color:var(--err)">${live.error}</span>`
+                        : checked === true
+                          ? '<span class="tag on">今天已领</span>'
+                          : checked === false
+                            ? '<span class="tag">今天未领</span>'
+                            : '<span class="muted">—</span>'
+                    }</td>
+                    <td>${balance === undefined ? '—' : balance}</td>
+                    <td>${
+                      speed
+                        ? `<span class="tag ${speed === 'bad' ? '' : 'on'}">${speed === 'fast' ? '很快' : speed === 'ok' ? '正常' : speed === 'slow' ? '偏慢' : '不通'}</span>`
+                        : '—'
+                    }</td>
+                    <td style="text-align:right;white-space:nowrap">
+                      <button class="link" data-login="${provider.id}">登录</button>
+                      <button class="link" data-toggle-acc="${account.id}" data-on="${account.enabled === false ? '0' : '1'}">${account.enabled === false ? '启用' : '停用'}</button>
+                      <button class="link" data-del-acc="${account.id}">删除</button>
+                    </td>
+                  </tr>`
+                })
+              : []
+
+            const rowsHtml = rows.length
+              ? `<table style="margin-top:8px">
+                  <thead><tr><th>账号</th><th style="width:80px">状态</th><th style="width:120px">今日额度</th><th style="width:80px">余额</th><th style="width:80px">速度</th><th></th></tr></thead>
+                  <tbody>${rows.join('')}</tbody>
+                </table>`
+              : `<p class="hint" style="margin:6px 0 0">没有账号。点“登录”打开官网登录后，再把 access token 填到下面。</p>`
+
+            const addHtml = `<details style="margin-top:8px">
+              <summary class="hint" style="cursor:pointer">添加账号</summary>
+              <div class="row" style="margin-top:8px">
+                <div class="label">access token</div>
+                <div class="grow"><input type="text" id="tok-${provider.id}" placeholder="粘贴登录后的 access token" /></div>
+                <div class="tail"><button class="ghost" data-add-acc="${provider.id}">添加</button></div>
+              </div>
+              <div class="row">
+                <div class="label">备注名</div>
+                <div class="grow"><input type="text" id="nick-${provider.id}" placeholder="可留空" /></div>
+              </div>
+            </details>`
+
+            return `<div style="border:1px solid var(--line-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px">
+              <div class="row">
+                <div class="grow">
+                  <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${provider.color};margin-right:8px"></span>
+                  <strong>${provider.label}</strong>
+                  <span class="muted" style="margin-left:8px">${provider.claimable ? '支持每日签到' : '仅额度查询'} · ${provider.accounts} 个账号</span>
+                </div>
+                <div class="tail">
+                  <label class="check"><input type="checkbox" data-provider="${provider.id}"${provider.enabled ? ' checked' : ''} /> 启用</label>
+                  <button class="link" data-login="${provider.id}">登录</button>
+                </div>
+              </div>
+              ${rowsHtml}
+              ${addHtml}
+            </div>`
+          })
+          .join('')
+
+        document.querySelectorAll('[data-provider]').forEach((box) => {
+          box.onchange = () => toggleProvider(box.dataset.provider, box.checked)
+        })
+        document.querySelectorAll('[data-login]').forEach((button) => {
+          button.onclick = () => loginProvider(button.dataset.login)
+        })
+        document.querySelectorAll('[data-del-acc]').forEach((button) => {
+          button.onclick = () => deleteAccount(button.dataset.delAcc)
+        })
+        document.querySelectorAll('[data-toggle-acc]').forEach((button) => {
+          button.onclick = () => toggleAccount(button.dataset.toggleAcc, button.dataset.on !== '1')
+        })
+        document.querySelectorAll('[data-add-acc]').forEach((button) => {
+          button.onclick = () => addAccount(button.dataset.addAcc)
+        })
       }
 
       function renderCredit() {
@@ -559,6 +710,11 @@
                 time: $('creditTime').value.trim() || '09:00',
                 autoBenefits: $('creditBenefits').checked,
               },
+              channels: {
+                enabled: $('channelsEnabled').checked,
+                time: $('channelsTime').value.trim() || '09:00',
+                autoBenefits: $('channelsBenefits').checked,
+              },
             },
           })
           toast('设置已保存')
@@ -641,6 +797,149 @@
           } else {
             toast(result.error ?? '接入失败', true)
           }
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      async function toggleProvider(id, enabled) {
+        try {
+          const result = await api('/api/channels/provider/toggle', {
+            method: 'POST',
+            body: { id, enabled },
+          })
+          if (!result.ok) throw new Error(result.error ?? '设置失败')
+          toast(`${id} 已${enabled ? '启用' : '停用'}`)
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      async function toggleAccount(id, enabled) {
+        try {
+          const result = await api('/api/channels/account/enable', {
+            method: 'POST',
+            body: { id, enabled },
+          })
+          if (!result.ok) throw new Error(result.error ?? '设置失败')
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      async function deleteAccount(id) {
+        if (!confirm('确定要删除这个账号吗？删除后不再自动领取它的额度。')) return
+        try {
+          const result = await api('/api/channels/account/delete', { method: 'POST', body: { id } })
+          if (!result.ok) throw new Error(result.error ?? '删除失败')
+          toast('账号已删除')
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      async function addAccount(provider) {
+        const token = $(`tok-${provider}`)?.value.trim() ?? ''
+        const nickname = $(`nick-${provider}`)?.value.trim() ?? ''
+        if (!token) {
+          toast('请先填写 access token', true)
+          return
+        }
+        try {
+          const result = await api('/api/channels/account/add', {
+            method: 'POST',
+            body: { provider, accessToken: token, nickname },
+          })
+          if (!result.ok) throw new Error(result.error ?? '添加失败')
+          toast('账号已添加')
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      async function loginProvider(provider) {
+        try {
+          const result = await api(`/api/channels/login?provider=${encodeURIComponent(provider)}`)
+          if (!result.ok) throw new Error(result.error ?? '打开失败')
+          toast('已在浏览器中打开登录页')
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      $('btnChannelsClaim').onclick = async () => {
+        const button = $('btnChannelsClaim')
+        button.disabled = true
+        button.textContent = '领取中…'
+        try {
+          const result = await api('/api/channels/claim', { method: 'POST' })
+          if (!result.ok) throw new Error(result.error ?? '领取失败')
+          const rows = (result.results ?? [])
+            .map(
+              (entry) =>
+                `<tr><td>${entry.provider}</td><td>${entry.nickname}</td><td>${
+                  entry.outcome.kind === 'claimed'
+                    ? `<span class="tag on">+${entry.outcome.credit}</span>`
+                    : `<span class="tag">${entry.outcome.kind}</span>`
+                }</td><td class="muted">${entry.outcome.message ?? ''}</td></tr>`,
+            )
+            .join('')
+          $('claimBox').innerHTML = `<table><thead><tr><th>渠道</th><th>账号</th><th>结果</th><th>说明</th></tr></thead><tbody>${rows}</tbody></table>`
+          toast(`领取完成，共 ${result.credit}`)
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        } finally {
+          button.disabled = false
+          button.textContent = '立即领取全部'
+        }
+      }
+
+      $('btnChannelsProbe').onclick = async () => {
+        const button = $('btnChannelsProbe')
+        button.disabled = true
+        button.textContent = '测试中…'
+        try {
+          const result = await api('/api/channels/probe')
+          if (!result.ok) throw new Error(result.error ?? '测试失败')
+          const rows = (result.results ?? [])
+            .map(
+              (entry) => `<tr><td>${entry.provider}</td><td>${entry.nickname}</td><td>${
+                entry.ok
+                  ? `<span class="tag on">${entry.averageMs} ms</span>`
+                  : `<span class="tag">不通</span>`
+              }</td><td class="muted">${entry.error ?? ''}</td></tr>`,
+            )
+            .join('')
+          $('probeBox').innerHTML = `<p class="hint" style="margin:0 0 6px">平均 ${result.summary?.averageMs ?? 0} ms，可达 ${result.summary?.reachable ?? 0}/${result.summary?.total ?? 0}</p><table><thead><tr><th>渠道</th><th>账号</th><th>耗时</th><th>错误</th></tr></thead><tbody>${rows}</tbody></table>`
+          toast('测试完成')
+        } catch (error) {
+          toast(error.message, true)
+        } finally {
+          button.disabled = false
+          button.textContent = '连通测试与速度检测'
+        }
+      }
+
+      $('btnChannelsImport').onclick = async () => {
+        try {
+          const result = await api('/api/channels/import', { method: 'POST' })
+          if (!result.ok) throw new Error(result.error ?? '导入失败')
+          toast(`导入了 ${result.added} 个账号，跳过 ${result.skipped} 个`)
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      $('btnChannelsRefresh').onclick = async () => {
+        try {
+          await api('/api/channels/status')
           await refresh()
         } catch (error) {
           toast(error.message, true)

@@ -20,6 +20,10 @@ Windows 上是一个**桌面软件**：装完双击打开，配置界面在窗�
 
 ![每日领取积分](docs/credit-shot.png)
 
+第三方免费渠道（LobsterAI、Qoder、TRAE、Loomy、MiniMax、ZCode 等）的每日额度也一起管：
+
+![第三方免费渠道](docs/channels-shot.png)
+
 ---
 
 ## 特性
@@ -31,6 +35,8 @@ Windows 上是一个**桌面软件**：装完双击打开，配置界面在窗�
 - **模型目录自动同步** —— 把 WorkBuddy 里的模型写进 Codex 的模型目录，桌面版模型选择器里直接能选。
 - **cc-switch 保护** —— 如果你装了 cc-switch（会改写同一批配置文件的切换器），工具会注册自己为 provider 并设为当前，避免它把配置改回去。
 - **每天自动领积分** —— WorkBuddy 每天签到可以免费拿积分，工具能按你设定的时间自动签到、领取一次性活动、兑换连续签到阶梯。
+- **第三方免费渠道** —— LobsterAI、Qoder（国际/中国版）、TRAE、Cline、Loomy、Raccoon、MiniMax Code、ZCode、Gemini Code Assist 十个服务的账号集中管理：逐个开关应用、增删账号、每天自动领所有账号的额度，还能做连通测试和速度检测。
+- **全自动客户端植入** —— 网关一启动就自己认出机器上装了哪些客户端并写好配置，新机器上不用手动点一遍。
 - **只读本机、回环地址** —— 网关只监听 127.0.0.1，拒绝非回环的 Host / Origin，带 Bearer 令牌。
 - **命令行同样可用** —— 桌面软件里改的东西，命令行都能改，两边共用同一套配置文件。
 
@@ -49,7 +55,7 @@ Windows 上是一个**桌面软件**：装完双击打开，配置界面在窗�
 
 ## 安装（Windows 桌面软件）
 
-1. 从 Releases 下载 `WorkBuddy-Bridge-Setup-<版本>.exe`（[v0.2.0](https://github.com/Lingw2/workbuddy-bridge/releases/tag/v0.2.0)）；
+1. 从 Releases 下载 `WorkBuddy-Bridge-Setup-<版本>.exe`（[v0.3.0](https://github.com/Lingw2/workbuddy-bridge/releases/tag/v0.3.0)）；
 2. 双击安装，可自选安装目录，会创建桌面和开始菜单快捷方式；
 3. 启动「WorkBuddy Bridge」，窗口里就是配置界面。
 
@@ -116,6 +122,9 @@ workbuddy-bridge install codex cc-switch
 workbuddy-bridge uninstall         # 移除写入的配置
 workbuddy-bridge credit            # 看今天的签到状态、余额、可兑换阶梯
 workbuddy-bridge claim             # 立刻把所有还开着的积分通道领一遍
+workbuddy-bridge channels          # 看第三方渠道的账号和今天的领取状态
+workbuddy-bridge channels-claim    # 一次性领完所有渠道所有账号的每日额度
+workbuddy-bridge channels-probe    # 连通测试 + 速度检测
 ```
 
 环境变量：`WORKBUDDY_BRIDGE_UI_PORT`（配置页端口，默认 4477）。
@@ -130,6 +139,7 @@ workbuddy-bridge claim             # 立刻把所有还开着的积分通道领�
 | **客户端接入** | 逐个或一键写入 Codex、Claude Code、Claude 桌面版的配置。 |
 | **模型与路由** | 选 Codex / Claude 的默认模型、推理强度；编辑 Claude 路由表（路由名 → WorkBuddy 模型、档位、是否默认）。 |
 | **每日领取积分** | 显示今天的签到状态、每日积分、连续天数、余额、可兑换阶梯；设置每天自动领取的时间和开关；点「立即领取」手动领一次。 |
+| **第三方免费渠道** | 十个第三方服务的账号集中管理：逐个开关应用、添加/停用/删除账号、点「登录」直接跳官网登录、每天自动领取所有账号额度、连通测试与速度检测、一键从其它插件导入账号。 |
 | **网关** | 查看两个网关是否在跑，修改端口，查看/复制令牌，开机自启开关。 |
 | **日志** | 网关最近 200 行日志。 |
 
@@ -140,6 +150,8 @@ workbuddy-bridge claim             # 立刻把所有还开着的积分通道领�
 3. 写 Claude 桌面版的 3p 配置（`%LOCALAPPDATA%\Claude-3p\configLibrary\...`）。
 
 每一步都会先把原文件复制一份 `.bak-workbuddy-<时间戳>`。
+
+**不用手动点。** 网关每次启动都会自己扫一遍机器上装了哪些客户端，已经接好的跳过，没接的写好 —— 新机器上装完软件直接用就行。不想让它自动改配置，可以在 `config.json` 里把 `autoInstall` 设成 `false`，或者在界面上关掉对应的客户端。
 
 ---
 
@@ -208,6 +220,50 @@ WorkBuddy 的积分走 `https://www.codebuddy.cn`（国际站是 `https://www.wo
 
 配置界面「每日领取积分」区块可以设置时间（本地时间，默认 09:00）和开关，也可以点「立即领取」手动领一次。
 
+### 6. 第三方免费渠道
+
+除了 WorkBuddy 自己，还有十家服务每天送免费额度。工具把它们接进来，账号和领取逻辑都在 `src/channels/`：
+
+| 服务 | 官方 | 每日签到 | 额度查询 |
+| --- | --- | --- | --- |
+| LobsterAI（有道） | [lobsterai.youdao.com](https://lobsterai.youdao.com) | ✅ | ✅ |
+| Qoder（国际） | [qoder.com](https://qoder.com) | ✅ | ✅ |
+| Qoder 中国版 | [qoder.cn](https://qoder.cn) | ✅ | ✅ |
+| TRAE（字节） | [trae.cn](https://www.trae.cn) | ✅ | ✅ |
+| Cline | [cline.bot](https://cline.bot) | — | ✅ |
+| Loomy（讯飞） | [loomy.xunfei.cn](https://loomy.xunfei.cn) | ✅ | ✅ |
+| Raccoon（商汤） | [xiaohuanxiong.com](https://xiaohuanxiong.com) | — | ✅ |
+| MiniMax Code | [account.minimax.cn](https://account.minimax.cn) | ✅ | ✅ |
+| ZCode（智谱） | [zcode.z.ai](https://zcode.z.ai) | ⚠️ | ✅ |
+| Gemini Code Assist | [codeassist.google](https://codeassist.google) | — | ✅ |
+
+各家实际调用的端点：
+
+| 服务 | 签到状态 | 领取 | 余额 |
+| --- | --- | --- | --- |
+| LobsterAI | `GET /api/client-activities/slot` → `GET /api/client-activities/{code}/context` | `POST /api/client-activities/{code}/actions/check_in` | `GET /api/user/profile-summary` |
+| Qoder / Qoder CN | `GET /sash/api/v1/me/campaigns` | `POST /sash/api/v1/me/campaigns/{id}/claim` | `GET /sash/api/v2/me/usage` |
+| TRAE | `POST /trae/api/v2/ug/checkin_credits/status` | `POST /trae/api/v2/ug/checkin_credits/claim` | `POST /trae/api/v2/pay/ide_user_ent_usage` |
+| Loomy | `POST /points/first-login` | `POST /points/first-login` | `GET /points/records` |
+| MiniMax Code | `GET /minimax-cloud/api/v1/signin/status` | `POST /minimax-cloud/api/v1/signin/claim` | `GET /minimax-cloud/api/v1/credit/details` |
+| ZCode | `GET /api/v1/zcode-plan/billing/preview` | `POST /api/v1/zcode-plan/billing/claim` | `GET /api/v1/zcode-plan/billing/balance` |
+| Cline | — | — | `GET /api/v1/users/me/plan/usage-limits` |
+| Gemini | — | — | `GET /v1internal:retrieveUserQuotaSummary` |
+| Raccoon | — | `POST /api/web/desktop/v1/login/points/grant`（新人礼） | `GET /api/web/points/v1/balance` |
+
+特点：
+
+- **多账号**：每个服务可以加任意多个账号，「立即领取全部」会把所有服务的所有账号挨个领一遍；
+- **逐个删**：不想留的账号在界面上点「删除」即可，删掉的账号不会被「从其它插件导入」再带回来；
+- **可开关**：应用级别和账号级别都能停用，停用的不参与领取；
+- **登录跳转**：点「登录」直接用系统浏览器打开对应官网；
+- **连通测试与速度检测**：每个账号连打三次取往返时间，分「很快 / 正常 / 偏慢 / 不通」；
+- **自动领取**：和 WorkBuddy 积分一样按本地日切分，同一天只跑一次，失败按 1/5/15/30/60 分钟退避。
+
+账号存在 `~/.workbuddy-bridge/channel-accounts.json`，领取状态存在 `~/.workbuddy-bridge/channel-claim-state.json`。
+
+⚠️ **ZCode 的领取端点始终要人机验证**（上游返回 `captcha verify failed`，且校验在套餐检查之前），工具会明确提示「需要在官网手动领取」，不会去绕验证码。
+
 ---
 
 ## 配置写在哪
@@ -218,7 +274,7 @@ WorkBuddy 的积分走 `https://www.codebuddy.cn`（国际站是 `https://www.wo
 | Claude Code | `~/.claude/settings.json` |
 | Claude 桌面版 | `%LOCALAPPDATA%\Claude-3p\configLibrary\00000000-0000-4000-8000-000000157210.json` |
 | cc-switch | `~/.cc-switch/cc-switch.db`（provider 表）、`~/.cc-switch/settings.json`、`~/.cc-switch/live-state.json` |
-| 本工具 | `~/.workbuddy-bridge/config.json`、`~/.workbuddy-bridge/session.json`、`~/.workbuddy-bridge/credit-state.json` |
+| 本工具 | `~/.workbuddy-bridge/config.json`、`~/.workbuddy-bridge/session.json`、`~/.workbuddy-bridge/credit-state.json`、`~/.workbuddy-bridge/channel-accounts.json`、`~/.workbuddy-bridge/channel-claim-state.json` |
 
 桌面软件和命令行版读写的是同一份文件，两边可以混用。
 
@@ -231,6 +287,8 @@ WorkBuddy 的积分走 `https://www.codebuddy.cn`（国际站是 `https://www.wo
 - **Claude 桌面版的 `inferenceModels` 必须是 `claude-*` 形式**，桌面版会拒绝含 `deepseek` / `glm` / `kimi` / `gpt` 等字样的 id。
 - **cc-switch 必须在退出状态下才能写它的数据库**。跑着的时候工具会跳过这一步并提示。
 - **积分活动以官方为准**。一次性活动（补偿 / 新人礼）由上游自己开关，工具只在上游说还开着的时候去领；连续签到阶梯只有满 7/14/28 天才解锁。工具不会绕过任何规则。
+- **ZCode 的每日领取要人机验证**，上游强制校验，工具会提示去官网手动领。
+- **Cline / Raccoon / Gemini 没有每日签到接口**，工具只查额度。Raccoon 的一次性登录奖励会去领。
 - **安装包没有代码签名**，Windows SmartScreen 会提示未知发布者（见上面「Windows 提示『未知发布者』？」）。
 - 工具读写的是别人的账号数据，用在哪儿、怎么用，请自己判断。
 
@@ -239,7 +297,7 @@ WorkBuddy 的积分走 `https://www.codebuddy.cn`（国际站是 `https://www.wo
 ## 开发
 
 ```bash
-npm test                   # 协议转换 + 积分流程的单元测试
+npm test                   # 协议转换 + 积分流程 + 第三方渠道的单元测试
 npm run smoke              # 对着真实网关跑一轮端到端
 npm run desktop            # 开发模式启动桌面软件
 npm run icon               # 重新生成图标
@@ -251,9 +309,10 @@ node bin/workbuddy-bridge.js doctor
 ```
 bin/            CLI 入口
 desktop/        Electron 桌面外壳：窗口、托盘、开机自启
-src/app.js      应用容器：网关、模型、积分、UI
+src/app.js      应用容器：网关、模型、积分、渠道、UI
 src/upstream/   WorkBuddy 上游：凭据、模型目录、SSE、积分接口
 src/credit/     每日自动领取积分：调度器、状态落盘
+src/channels/   第三方免费渠道：十个服务的接口、账号库、调度器、连通检测
 src/gateway/    协议转换层：Anthropic / Responses / 改写
 src/config/     客户端配置读写：Codex / Claude / cc-switch / TOML
 src/ui/         配置页（原生 HTML + JS，无构建步骤）

@@ -25,7 +25,7 @@ app.whenReady().then(async () => {
     width,
     height,
     show: false,
-    backgroundColor: '#f6f7f5',
+    backgroundColor: '#0d0f0e',
     webPreferences: { contextIsolation: true, nodeIntegration: false },
   })
 

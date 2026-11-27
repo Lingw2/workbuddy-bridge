@@ -21,6 +21,9 @@ import {
 } from '../config/claude.js'
 import { installCcSwitch, readCcSwitchState, isRunning as ccSwitchRunning } from '../config/ccswitch.js'
 import { discoverSession, describeSession } from '../upstream/session.js'
+import { providerById, PROVIDER_ORDER } from '../channels/providers.js'
+import { probeAll } from '../channels/probe.js'
+import { openInBrowser } from '../config/browser.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const INDEX_FILE = join(HERE, 'index.html')
@@ -159,6 +162,127 @@ export async function startUiServer({ app, port }) {
       return
     }
 
+    if (url.pathname === '/api/channels/status' && req.method === 'GET') {
+      try {
+        json(res, 200, { ok: true, ...(await app.channels.status()) })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
+    if (url.pathname === '/api/channels/claim' && req.method === 'POST') {
+      try {
+        const summary = await app.channels.claim({ reason: 'manual' })
+        json(res, 200, { ok: true, ...summary })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
+    if (url.pathname === '/api/channels/import' && req.method === 'POST') {
+      try {
+        const result = app.channelAccounts.importFromDsh()
+        app.channels.invalidate()
+        json(res, 200, { ok: true, ...result })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
+    if (url.pathname === '/api/channels/account/add' && req.method === 'POST') {
+      const body = await readBody(req)
+      try {
+        const account = app.channelAccounts.add({
+          provider: String(body.provider ?? ''),
+          accessToken: String(body.accessToken ?? ''),
+          nickname: body.nickname,
+          extra: body.extra ?? {},
+        })
+        json(res, 200, { ok: true, account })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
+    if (url.pathname === '/api/channels/account/enable' && req.method === 'POST') {
+      const body = await readBody(req)
+      const id = String(body.id ?? '')
+      try {
+        const account = app.channelAccounts.setEnabled(id, Boolean(body.enabled))
+        const disabled = new Set(app.config.channels?.disabledAccounts ?? [])
+        if (account.enabled) disabled.delete(id)
+        else disabled.add(id)
+        setDisabledAccounts(app, disabled)
+        json(res, 200, { ok: true, account: { id: account.id, enabled: account.enabled } })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
+    if (url.pathname === '/api/channels/account/delete' && req.method === 'POST') {
+      const body = await readBody(req)
+      const id = String(body.id ?? '')
+      try {
+        app.channelAccounts.remove(id)
+        const disabled = new Set(app.config.channels?.disabledAccounts ?? [])
+        disabled.delete(id)
+        setDisabledAccounts(app, disabled)
+        json(res, 200, { ok: true })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
+    if (url.pathname === '/api/channels/provider/toggle' && req.method === 'POST') {
+      const body = await readBody(req)
+      const id = String(body.id ?? '')
+      const enabled = Boolean(body.enabled)
+      try {
+        const config = app.config
+        const disabled = new Set(config.channels?.disabledProviders ?? [])
+        if (enabled) disabled.delete(id)
+        else disabled.add(id)
+        app.updateConfig(mergeConfig(config, {
+          channels: { disabledProviders: [...disabled] },
+        }))
+        json(res, 200, { ok: true, id, enabled })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
+    if (url.pathname === '/api/channels/login' && req.method === 'GET') {
+      const id = String(url.searchParams.get('provider') ?? '')
+      const provider = providerById(id)
+      if (!provider) {
+        json(res, 404, { error: `unknown provider: ${id}` })
+        return
+      }
+      openInBrowser(provider.portal)
+      json(res, 200, { ok: true, url: provider.portal })
+      return
+    }
+
+    if (url.pathname === '/api/channels/probe' && req.method === 'GET') {
+      try {
+        const result = await probeAll({
+          store: app.channelAccounts,
+          service: app.channels,
+        })
+        json(res, 200, { ok: true, ...result })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
     if (url.pathname === '/api/logs' && req.method === 'GET') {
       json(res, 200, { lines: tailLog(Number(url.searchParams.get('lines') ?? '200')) })
       return
@@ -201,6 +325,7 @@ async function collectState(app) {
       claude: config.claude,
       clients: config.clients,
       credit: config.credit,
+      channels: config.channels,
       logLevel: config.logLevel,
     },
     models,
@@ -218,6 +343,8 @@ async function collectState(app) {
     claudeDesktop: readClaudeDesktopState(),
     ccSwitch,
     credit: await collectCredit(app),
+    channels: await collectChannels(app),
+    channelAccounts: app.channelAccounts.list(),
     autoStart: app.autoStart
       ? { supported: true, enabled: await app.autoStart.isEnabled() }
       : { supported: false, enabled: false },
@@ -232,6 +359,36 @@ async function collectState(app) {
     })),
     logs: tailLog(120),
   }
+}
+
+/**
+ * The state of the third-party channels.
+ *
+ * The upstream is asked one account at a time, so this can take a while; a
+ * failure of one account must not break the page.
+ */
+async function collectChannels(app) {
+  const settings = app.channels.settings
+  const providers = app.channels.providers()
+
+  try {
+    const status = await app.channels.status({ maxAgeMs: 30_000 })
+    return { supported: true, providers, ...status }
+  } catch (error) {
+    return { supported: true, providers, settings, error: error.message }
+  }
+}
+
+/**
+ * Remember that an account is switched off.
+ *
+ * The account store keeps its own flag; the config keeps the list the UI
+ * reads back, so both stay in step.
+ */
+function setDisabledAccounts(app, ids) {
+  app.updateConfig(
+    mergeConfig(app.config, { channels: { disabledAccounts: [...new Set(ids)] } }),
+  )
 }
 
 /** The credit state, without letting a billing failure break the page. */

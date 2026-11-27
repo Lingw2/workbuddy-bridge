@@ -25,6 +25,7 @@ import {
 } from '../src/config/claude.js'
 import { installCcSwitch, readCcSwitchState } from '../src/config/ccswitch.js'
 import { resolveSession, describeSession } from '../src/upstream/session.js'
+import { probeAll } from '../src/channels/probe.js'
 
 const UI_PORT = Number(process.env.WORKBUDDY_BRIDGE_UI_PORT ?? 4477)
 
@@ -51,7 +52,9 @@ async function commandUi() {
   const app = new App(loadConfig())
   await app.startGateway()
   await app.loadModels()
+  await app.autoInstallClients()
   app.startCreditScheduler()
+  app.startChannelScheduler()
   app.uiServer = await startUiServer({ app, port: UI_PORT })
   const url = `http://127.0.0.1:${UI_PORT}/`
   console.log(`\n  WorkBuddy Bridge`)
@@ -69,7 +72,9 @@ async function commandStart() {
   const app = new App(loadConfig())
   await app.startGateway()
   await app.loadModels()
+  await app.autoInstallClients()
   app.startCreditScheduler()
+  app.startChannelScheduler()
   console.log('Gateway running. Press Ctrl+C to stop.')
   await new Promise(() => {})
 }
@@ -279,6 +284,61 @@ async function commandClaim() {
   console.log(`\n  total credit: ${summary.credit}\n`)
 }
 
+/** `channels`: show the third-party channels and their accounts. */
+async function commandChannels() {
+  const app = new App(loadConfig())
+  const status = await app.channels.status()
+  const accounts = app.channelAccounts.list()
+
+  console.log('\n  Third-party channels\n  ─────────────────────')
+  for (const provider of status.providers ?? []) {
+    const mine = accounts.filter((entry) => entry.provider === provider.id)
+    const mark = provider.enabled ? 'on ' : 'off'
+    console.log(`  [${mark}] ${provider.label.padEnd(20)} ${mine.length} account(s)${provider.claimable ? '' : '  (no daily check-in)'}`)
+    for (const account of mine) {
+      const live = (status.accounts ?? []).find((entry) => entry.id === account.id)
+      const state = live?.error
+        ? `error: ${live.error}`
+        : live?.checkin?.todayCheckedIn === true
+          ? 'claimed today'
+          : live?.checkin?.todayCheckedIn === false
+            ? 'not claimed yet'
+            : live?.checkin
+              ? 'unknown'
+              : 'unknown'
+      console.log(`         ${String(account.nickname ?? account.id).padEnd(22)} ${state}`)
+    }
+  }
+  console.log(`\n  automatic        ${status.settings.enabled ? `every day at ${status.settings.time}` : 'off'}`)
+  console.log('')
+}
+
+/** `channels-claim`: claim the daily allowance of every account. */
+async function commandChannelsClaim() {
+  const app = new App(loadConfig())
+  const summary = await app.channels.claim({ reason: 'manual' })
+  console.log('')
+  for (const entry of summary.results ?? []) {
+    console.log(
+      `  ${String(entry.provider).padEnd(12)} ${String(entry.nickname ?? '').padEnd(22)} ${entry.outcome.kind.padEnd(16)} ${entry.outcome.credit ?? 0} ${entry.outcome.message ?? ''}`,
+    )
+  }
+  console.log(`\n  total credit: ${summary.credit}\n`)
+}
+
+/** `channels-probe`: check that every account can be reached, and how fast. */
+async function commandChannelsProbe() {
+  const app = new App(loadConfig())
+  const result = await probeAll({ store: app.channelAccounts, service: app.channels })
+  console.log('\n  Channel connectivity\n  ─────────────────────')
+  for (const entry of result.results ?? []) {
+    console.log(
+      `  ${String(entry.provider).padEnd(12)} ${String(entry.nickname ?? '').padEnd(22)} ${entry.ok ? `${entry.averageMs} ms` : `unreachable  ${entry.error}`}`,
+    )
+  }
+  console.log(`\n  reachable ${result.summary.reachable}/${result.summary.total}, average ${result.summary.averageMs} ms\n`)
+}
+
 /** Run a command and keep the process alive for the long-running ones. */
 async function main() {
   const [command = 'ui', ...rest] = process.argv.slice(2)
@@ -302,6 +362,12 @@ async function main() {
       return commandCredit()
     case 'claim':
       return commandClaim()
+    case 'channels':
+      return commandChannels()
+    case 'channels-claim':
+      return commandChannelsClaim()
+    case 'channels-probe':
+      return commandChannelsProbe()
     case 'help':
     case '--help':
     case '-h':
@@ -332,6 +398,9 @@ function readHelp() {
     uninstall [targets] remove the bridge configuration again
     credit             show the WorkBuddy credit and check-in state
     claim              claim every open WorkBuddy credit channel now
+    channels           show the third-party channels and their accounts
+    channels-claim     claim the daily allowance of every channel account
+    channels-probe     check that every channel account is reachable
 
   Environment:
     WORKBUDDY_BRIDGE_UI_PORT   port for the configuration page (default 4477)

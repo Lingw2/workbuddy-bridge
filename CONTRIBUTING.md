@@ -71,6 +71,19 @@ node bin/workbuddy-bridge.js doctor
 
 改 billing 接口时注意路径前缀不统一：`checkin-activity-status` 和 `daily-checkin` 带 `/v2`，而 `compensation-status` / `check-gift-claimed` / `claim-*` **不带** `/v2`（带了会 404）。
 
+## 第三方免费渠道
+
+`src/channels/` 放了十家第三方服务的账号与领取逻辑（providers.js 是接口，store.js 是账号库，service.js 是调度器，probe.js 是连通检测，dsh-store.js 负责从 dsh 插件那边读账号）。
+
+- **每家上游的字段形状都不一样**，别照抄别家：LobsterAI 的活动上下文在 `/{code}/context?configRevision=` 且要带 `state.claimedToday`；Qoder 领的是 `campaigns` 里的 `CLAIM_BENEFIT`；MiniMax 是 7 天日历面板（看 `is_today` 那一天的 `status`）；TRAE 的鉴权头是 `Cloud-IDE-JWT` 而不是 `Bearer`；Loomy 成功码是字符串 `'000000'`。
+- **区分「今天没领」和「看不出来」**。有些上游不告诉今天领没领（比如 ZCode 的领取端点被验证码挡着，Loomy 只有额度流水），这时候 `todayCheckedIn` 要给 `null`，界面上显示「—」，不要谎报成「今天未领」再反复去打。
+- **一次只打一个账号**。这些上游对并发敏感，串行来。
+- **领之前先查状态**，已领的账号跳过，不要天天去打扰。
+- **ZCode 的 captcha 不绕**。上游对领取端点强制人机验证，工具明确报「需要在官网手动领取」。
+- 测试同样用本地 mock（`test/channels.test.mjs`），mock 上游通过 `credential.baseUrl` 指向本地端口。
+
+改渠道代码时，先确认上游接口形状 —— 参考实现可以看 dsh 插件的 `vendor/channel-pack/pack.js`（本机已安装的包里就有），但**不要直接依赖那个包**，它是别人的构建产物。
+
 ## 提交前自查
 
 ```bash

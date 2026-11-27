@@ -10,6 +10,9 @@ import { loadConfig, saveConfig } from './config/store.js'
 import { Bridge } from './gateway/bridge.js'
 import { GatewayServer } from './gateway/server.js'
 import { CreditService } from './credit/service.js'
+import { AccountStore } from './channels/store.js'
+import { ChannelService } from './channels/service.js'
+import { autoInstallClients } from './config/autoinstall.js'
 
 /** A logger that writes to the log file and the console. */
 export function createLogger(level = 'info') {
@@ -37,6 +40,10 @@ export class App {
     this.bridge = new Bridge(config, this.logger)
     /** The daily WorkBuddy credit claim. */
     this.credit = new CreditService(config, this.logger)
+    /** The accounts of the third-party channels. */
+    this.channelAccounts = new AccountStore()
+    /** The daily claim for the third-party channels. */
+    this.channels = new ChannelService(config, this.logger, { store: this.channelAccounts })
     this.servers = []
     this.uiServer = null
     /** Ports served by a gateway this process did not start. */
@@ -127,9 +134,63 @@ export class App {
     this.credit.start()
   }
 
+  /**
+   * Point the installed clients at the local gateway.
+   *
+   * This runs on every start, so a fresh machine is set up without the user
+   * having to click through the page, and a client that was reset by another
+   * tool is repaired on the next start.
+   *
+   * @param {boolean} [force] write the configuration even when the client
+   *   already looks connected
+   */
+  async autoInstallClients(force = false) {
+    if (this.config.autoInstall === false) {
+      this.logger.log('[clients] automatic setup is switched off')
+      return null
+    }
+    try {
+      const result = await autoInstallClients(this)
+      for (const [id, entry] of Object.entries(result.clients ?? {})) {
+        if (entry?.ok && !entry.already) {
+          this.logger.log(`[clients] ${id} now points at the gateway`)
+        } else if (entry?.ok && entry.already) {
+          this.logger.log(`[clients] ${id} already points at the gateway`)
+        } else if (entry?.skipped) {
+          this.logger.log(`[clients] ${id} skipped: ${entry.skipped}`)
+        } else if (entry?.error) {
+          this.logger.log(`[clients] ${id} failed: ${entry.error}`)
+        }
+      }
+      return result
+    } catch (error) {
+      this.logger.log(`[clients] automatic setup failed: ${error.message}`)
+      return null
+    }
+  }
+
+  /**
+   * Start the daily claim scheduler for the third-party channels.
+   *
+   * The accounts of the other plugin are imported once, so the user does not
+   * have to paste a token for every account.
+   */
+  startChannelScheduler() {
+    try {
+      const imported = this.channelAccounts.importFromDsh()
+      if (imported.added > 0) {
+        this.logger.log(`[channels] imported ${imported.added} accounts from the other plugin`)
+      }
+    } catch (error) {
+      this.logger.log(`[channels] could not import accounts: ${error.message}`)
+    }
+    this.channels.start()
+  }
+
   /** Stop every server. */
   async stop() {
     this.credit.stop()
+    this.channels.stop()
     for (const server of this.servers) await server.stop()
     this.servers = []
     if (this.uiServer) {
@@ -143,6 +204,7 @@ export class App {
     this.config = saveConfig(next)
     this.bridge.config = this.config
     this.credit.config = this.config
+    this.channels.config = this.config
     return this.config
   }
 }

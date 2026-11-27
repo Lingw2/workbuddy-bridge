@@ -38,6 +38,13 @@ export const DEFAULTS = {
     claudeCode: true,
     claudeDesktop: true,
   },
+  /**
+   * Point the installed clients at the gateway on every start.
+   *
+   * This is what makes the tool work on a fresh machine without the user
+   * having to click through the page.
+   */
+  autoInstall: true,
   credit: {
     /** Claim the daily WorkBuddy credit every day. */
     enabled: false,
@@ -45,6 +52,23 @@ export const DEFAULTS = {
     time: '09:00',
     /** Also claim the one-off campaigns while the upstream has them open. */
     autoBenefits: true,
+  },
+  channels: {
+    /**
+     * Claim the daily allowance of the third-party channels every day.
+     *
+     * On by default: the whole point of the feature is that the daily
+     * allowance is claimed without the user doing anything.
+     */
+    enabled: true,
+    /** Local time of day for the automatic claim. */
+    time: '09:00',
+    /** Also claim the one-off rewards while the upstream has them open. */
+    autoBenefits: true,
+    /** Providers the user switched off. */
+    disabledProviders: [],
+    /** Accounts the user switched off. */
+    disabledAccounts: [],
   },
   logLevel: 'info',
 }
@@ -77,7 +101,10 @@ export function loadConfig() {
     codex: { ...DEFAULTS.codex, ...(stored.codex ?? {}) },
     claude: { ...DEFAULTS.claude, ...(stored.claude ?? {}) },
     clients: { ...DEFAULTS.clients, ...(stored.clients ?? {}) },
+    autoInstall:
+      typeof stored.autoInstall === 'boolean' ? stored.autoInstall : DEFAULTS.autoInstall,
     credit: { ...DEFAULTS.credit, ...(stored.credit ?? {}) },
+    channels: { ...DEFAULTS.channels, ...(stored.channels ?? {}) },
   }
 
   let generated = false
@@ -126,12 +153,27 @@ export function mergeConfig(current, patch) {
     }
   }
   if (patch.clients) next.clients = { ...current.clients, ...patch.clients }
+  if (typeof patch.autoInstall === 'boolean') next.autoInstall = patch.autoInstall
   if (patch.credit) {
     next.credit = { ...current.credit, ...patch.credit }
     if (typeof next.credit.enabled === 'boolean') next.credit.enabled = next.credit.enabled
     if (typeof next.credit.time === 'string') next.credit.time = next.credit.time
     if (typeof next.credit.autoBenefits === 'boolean') {
       next.credit.autoBenefits = next.credit.autoBenefits
+    }
+  }
+  if (patch.channels) {
+    next.channels = { ...current.channels, ...patch.channels }
+    if (typeof next.channels.enabled === 'boolean') next.channels.enabled = next.channels.enabled
+    if (typeof next.channels.time === 'string') next.channels.time = next.channels.time
+    if (typeof next.channels.autoBenefits === 'boolean') {
+      next.channels.autoBenefits = next.channels.autoBenefits
+    }
+    if (Array.isArray(patch.channels.disabledProviders)) {
+      next.channels.disabledProviders = patch.channels.disabledProviders.map((id) => String(id))
+    }
+    if (Array.isArray(patch.channels.disabledAccounts)) {
+      next.channels.disabledAccounts = patch.channels.disabledAccounts.map((id) => String(id))
     }
   }
   if (typeof patch.logLevel === 'string') next.logLevel = patch.logLevel
