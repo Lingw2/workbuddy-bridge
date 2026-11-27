@@ -21,3 +21,6 @@ captures/
 Thumbs.db
 .vscode/
 .idea/
+
+# release scratch
+.release-id

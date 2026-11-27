@@ -1,6 +1,6 @@
 {
   "name": "workbuddy-bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Use the models in your Tencent WorkBuddy account inside Codex and Claude, with a desktop app and a local config UI.",
   "author": "WorkBuddy Bridge contributors",
   "type": "module",
