@@ -100,6 +100,15 @@ node bin/workbuddy-bridge.js doctor
 - **Qoder 与 Gemini 没有公开模型目录**，用内置兜底表；这两家即使没有账号也会出现在目录里（`BUILTIN_ONLY`）。
 - **TRAE 的模型只能在它自己列出的通道里调**，发到别的通道上游会返回 `4001 param is invalid`。目录条目里记着 channel，发请求时带上。
 
+## 界面里的折叠分组
+
+第三方账号和模型数量很多，界面上按服务折叠，展开才看到细节。实现在 `src/ui/index.html`：
+
+- 用 `<details class="group" data-group="…">`，CSS 在文件顶部的 `details.group` 一段（`::before` 的箭头随 `open` 旋转）。
+- **页面每 5 秒重绘一次**，重绘会重建 DOM，把用户展开的分组关掉。所以展开状态存在 `openGroups` 这个 Set 里，`render()` 时按 key 还原，再用 `trackGroups(root)` 给每个 `details` 挂 `ontoggle` 把状态写回去。**新增可折叠区域时别忘了这两步**，否则用户一点开就被自动收起。
+- key 命名约定：`accounts:<providerId>` / `provider:<providerId>` / `models:<providerId>`。
+- 截图：`npx electron tools/capture-desktop.mjs docs/xxx.png 1080 1000 "#selector"`（第 5 个参数是滚动到的选择器；PowerShell 的 CopyFromScreen 在高 DPI 下会截歪，不要用）。
+
 ## 提交前自查
 
 ```bash

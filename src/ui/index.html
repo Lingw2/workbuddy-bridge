@@ -69,6 +69,12 @@
         font-weight: 600;
       }
       .block > h2 + .sub2 { margin: -8px 0 16px; font-size: 13px; color: var(--muted); }
+      .block h3 {
+        font-size: 13px;
+        color: var(--text);
+        margin: 22px 0 4px;
+        font-weight: 600;
+      }
 
       .stack > * + * { margin-top: 10px; }
       .row { display: flex; align-items: center; gap: 12px; }
@@ -133,6 +139,40 @@
       .hint { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
       .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
+      /* Collapsible groups: one row per service, open it to see the detail. */
+      details.group {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius);
+        margin-bottom: 8px;
+        background: var(--surface-2);
+      }
+      details.group > summary {
+        cursor: pointer;
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        list-style: none;
+        user-select: none;
+      }
+      details.group > summary::-webkit-details-marker { display: none; }
+      details.group > summary::before {
+        content: '›';
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1;
+        transition: transform .12s;
+        display: inline-block;
+      }
+      details.group[open] > summary::before { transform: rotate(90deg); }
+      details.group > summary:hover { color: var(--text); }
+      details.group > .body { padding: 2px 14px 12px; }
+      .swatch {
+        width: 9px; height: 9px; border-radius: 50%;
+        display: inline-block; flex: none;
+      }
+      .grow-count { flex: 1; text-align: right; }
+
       pre {
         background: #0a0c0b; color: #b6c2ba; border-radius: 6px;
         border: 1px solid var(--line-soft);
@@ -174,11 +214,11 @@
           </div>
         </div>
         <div class="actions" style="margin-top:16px">
-          <button class="ghost" id="btnRefreshModels">刷新模型列表</button>
+          <button class="ghost" id="btnRefreshModels">刷新全部状态</button>
           <span class="hint" id="modelCount" style="margin:0"></span>
         </div>
-        <h2 style="margin:22px 0 4px">第三方服务账号</h2>
-        <p class="hint" style="margin:0 0 10px">这些账号与 WorkBuddy 账号无关，是各个免费服务自己的账号。</p>
+        <h3>第三方服务账号</h3>
+        <p class="hint" style="margin:0 0 10px">这些账号与 WorkBuddy 账号无关，是各个免费服务自己的账号。点一行展开可以看这个服务的全部账号。</p>
         <div id="channelAccountBox"></div>
       </div>
 
@@ -267,13 +307,13 @@
 
       <div class="block">
         <h2>每日领取积分</h2>
-        <p class="sub2">WorkBuddy 每天可免费签到领取积分，这里可以设置成自动领取。</p>
+        <p class="sub2">WorkBuddy 账号每天可免费签到领积分，这里可以设置成自动领取。</p>
         <div class="stack" id="creditBox"></div>
         <div class="stack" style="margin-top:14px">
           <div class="row">
             <div class="label">自动领取</div>
             <div class="grow">
-              <label class="check"><input type="checkbox" id="creditEnabled" /> 每天自动领取积分</label>
+              <label class="check"><input type="checkbox" id="creditEnabled" /> 每天自动领取 WorkBuddy 积分</label>
             </div>
           </div>
           <div class="row">
@@ -284,12 +324,12 @@
           <div class="row">
             <div class="label">额外活动</div>
             <div class="grow">
-              <label class="check"><input type="checkbox" id="creditBenefits" /> 同时领取一次性活动（补偿 / 新人礼 / 连续签到阶梯）</label>
+              <label class="check"><input type="checkbox" id="creditBenefits" /> 同时领取 WorkBuddy 的一次性活动（补偿 / 新人礼 / 连续签到阶梯）</label>
             </div>
           </div>
         </div>
         <div class="actions" style="margin-top:16px">
-          <button id="btnClaimNow">立即领取</button>
+          <button id="btnClaimNow">立即领取 WorkBuddy 积分</button>
           <button class="ghost" id="btnCreditRefresh">刷新状态</button>
         </div>
       </div>
@@ -297,13 +337,13 @@
       <div class="block" id="channelsBlock">
         <h2>第三方免费渠道</h2>
         <p class="sub2">
-          这些服务每天都有免费额度。这里可以逐个开关应用、添加或删除账号，并一次性领取所有账号的每日额度。
+          这些服务每天都有免费额度。这里可以逐个开关应用、登录或删除账号，并一次性领取所有账号的每日额度。
         </p>
         <div class="stack">
           <div class="row">
             <div class="label">自动领取</div>
             <div class="grow">
-              <label class="check"><input type="checkbox" id="channelsEnabled" /> 每天自动领取所有渠道的额度</label>
+              <label class="check"><input type="checkbox" id="channelsEnabled" /> 每天自动领取所有第三方渠道的额度</label>
             </div>
           </div>
           <div class="row">
@@ -314,7 +354,7 @@
           <div class="row">
             <div class="label">一次性奖励</div>
             <div class="grow">
-              <label class="check"><input type="checkbox" id="channelsBenefits" /> 同时领取新人奖励</label>
+              <label class="check"><input type="checkbox" id="channelsBenefits" /> 同时领取第三方服务的新人奖励</label>
             </div>
           </div>
         </div>
@@ -322,7 +362,7 @@
         <div id="providerList" style="margin-top:18px"></div>
 
         <div class="actions" style="margin-top:16px">
-          <button id="btnChannelsClaim">立即领取全部</button>
+          <button id="btnChannelsClaim">立即领取全部渠道</button>
           <button class="ghost" id="btnChannelsProbe">连通测试与速度检测</button>
           <button class="ghost" id="btnChannelsImport">从其它插件导入账号</button>
           <button class="ghost" id="btnChannelsRefresh">刷新状态</button>
@@ -348,6 +388,30 @@
         'cc-switch': 'cc-switch',
       }
       let state = null
+      // Which fold-out groups the user opened. The page redraws every few
+      // seconds, so the open groups have to be remembered by hand.
+      const openGroups = new Set()
+
+      function isGroupOpen(key) {
+        return openGroups.has(key)
+      }
+
+      function rememberGroup(key, open) {
+        if (open) openGroups.add(key)
+        else openGroups.delete(key)
+      }
+
+      /**
+       * Remember which fold-out groups the user opened.
+       *
+       * The page redraws every few seconds, so the state of every `details`
+       * element has to be copied into `openGroups` before the redraw.
+       */
+      function trackGroups(root) {
+        root.querySelectorAll('details.group[data-group]').forEach((node) => {
+          node.ontoggle = () => rememberGroup(node.dataset.group, node.open)
+        })
+      }
 
       function toast(message, isError) {
         const el = $('toast')
@@ -392,7 +456,11 @@
                   model.name && model.name !== model.id
                     ? `${model.name} · ${model.id}`
                     : model.id
-                const service = model.providerLabel ? ` — ${model.providerLabel}` : ''
+                // The WorkBuddy models carry no service name, the others do.
+                const service =
+                  model.providerLabel && model.providerLabel !== 'WorkBuddy'
+                    ? ` — ${model.providerLabel}`
+                    : ''
                 return `<option value="${model.id}"${model.id === selected ? ' selected' : ''}>${label}${service}</option>`
               })
               .join('')
@@ -437,7 +505,7 @@
           : `<p class="hint" style="margin:0">没有找到可用的账号文件。</p>`
 
         $('modelCount').textContent = state.models.length
-          ? `${state.models.length} 个 WorkBuddy 模型${state.catalog?.models?.length ? ` · ${state.catalog.models.length} 个模型可选` : ''}`
+          ? `${state.models.length} 个 WorkBuddy 模型${state.catalog?.models?.length ? ` · 共 ${state.catalog.models.length} 个可选` : ''}`
           : ''
 
         const clientRows = [
@@ -511,7 +579,8 @@
        * The accounts of the third-party services, in the account block.
        *
        * The user wants to see every account of every service in one place,
-       * together with the WorkBuddy account above it.
+       * together with the WorkBuddy account above it. One collapsed row per
+       * service keeps the list short; opening a row shows its accounts.
        */
       function renderChannelAccounts() {
         const box = $('channelAccountBox')
@@ -521,24 +590,44 @@
           box.innerHTML = `<p class="hint" style="margin:0">还没有第三方服务账号。在下面的“第三方免费渠道”里点“一键登录”即可添加。</p>`
           return
         }
-        const rows = accounts
-          .map((account) => {
-            const provider = providers.get(account.provider)
-            return `<tr>
-              <td>
-                <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${provider?.color ?? '#8A938C'};margin-right:8px"></span>
-                ${provider?.label ?? account.provider}
-              </td>
-              <td>${account.nickname ?? account.id}</td>
-              <td>${account.enabled === false ? '<span class="tag">已停用</span>' : '<span class="tag on">启用</span>'}</td>
-              <td class="muted">${account.imported ? '来自其它插件' : '本工具添加'}</td>
-            </tr>`
-          })
-          .join('')
-        box.innerHTML = `<table>
-          <thead><tr><th style="width:180px">服务</th><th>账号</th><th style="width:90px">状态</th><th style="width:130px">来源</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`
+
+        // Group the accounts by service so one row covers every account of it.
+        const groups = new Map()
+        for (const account of accounts) {
+          if (!groups.has(account.provider)) groups.set(account.provider, [])
+          groups.get(account.provider).push(account)
+        }
+
+        // The live state tells us which accounts already got their allowance.
+        const live = new Map((state.channels?.accounts ?? []).map((entry) => [entry.id, entry]))
+        const claimed = (account) => live.get(account.id)?.checkin?.todayCheckedIn === true
+
+        const blocks = [...groups.entries()].map(([providerId, mine]) => {
+          const provider = providers.get(providerId)
+          const claimedCount = mine.filter(claimed).length
+          // A compact index of the accounts; the details live in the channel
+          // block further down.
+          const chips = mine
+            .map(
+              (account) =>
+                `<span class="tag${account.enabled === false ? '' : ' on'}" title="${account.imported ? '来自其它插件' : '本工具添加'}">${account.nickname ?? account.id}</span>`,
+            )
+            .join(' ')
+          const key = `accounts:${providerId}`
+          return `<details class="group" data-group="${key}"${isGroupOpen(key) ? ' open' : ''}>
+            <summary>
+              <span class="swatch" style="background:${provider?.color ?? '#8A938C'}"></span>
+              <strong>${provider?.label ?? providerId}</strong>
+              <span class="muted">${mine.length} 个账号</span>
+              <span class="grow-count">${claimedCount ? `<span class="tag on">已领 ${claimedCount}</span>` : ''}</span>
+            </summary>
+            <div class="body">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div>
+            </div>
+          </details>`
+        })
+        box.innerHTML = blocks.join('')
+        trackGroups(box)
       }
 
       /** The third-party channels block. */
@@ -563,18 +652,31 @@
         list.innerHTML = (channels.providers ?? [])
           .map((provider) => {
             const mine = (state.channelAccounts ?? []).filter((a) => a.provider === provider.id)
+            const live = mine.map((account) => byAccount.get(account.id)).filter(Boolean)
+            const claimed = live.filter((entry) => entry.checkin?.todayCheckedIn === true).length
+            const pending = live.filter((entry) => entry.checkin?.todayCheckedIn === false).length
+            const modelCount = (state.catalog?.models ?? []).filter(
+              (model) => model.provider === provider.id,
+            ).length
+
+            const summaryTags = [
+              claimed ? `<span class="tag on">已领 ${claimed}</span>` : '',
+              pending ? `<span class="tag">未领 ${pending}</span>` : '',
+            ]
+              .filter(Boolean)
+              .join(' ')
+
             const rows = mine.length
               ? mine.map((account) => {
-                  const live = byAccount.get(account.id)
-                  const checked = live?.checkin?.todayCheckedIn
-                  const balance = live?.balance?.total
-                  const speed = live?.speed
+                  const entry = byAccount.get(account.id)
+                  const checked = entry?.checkin?.todayCheckedIn
+                  const balance = entry?.balance?.total
                   return `<tr>
                     <td>${account.nickname ?? account.id}</td>
                     <td>${account.enabled === false ? '<span class="tag">已停用</span>' : '<span class="tag on">启用</span>'}</td>
                     <td>${
-                      live?.error
-                        ? `<span style="color:var(--err)">${live.error}</span>`
+                      entry?.error
+                        ? `<span style="color:var(--err)">${entry.error}</span>`
                         : checked === true
                           ? '<span class="tag on">今天已领</span>'
                           : checked === false
@@ -582,11 +684,6 @@
                             : '<span class="muted">—</span>'
                     }</td>
                     <td>${balance === undefined ? '—' : balance}</td>
-                    <td>${
-                      speed
-                        ? `<span class="tag ${speed === 'bad' ? '' : 'on'}">${speed === 'fast' ? '很快' : speed === 'ok' ? '正常' : speed === 'slow' ? '偏慢' : '不通'}</span>`
-                        : '—'
-                    }</td>
                     <td style="text-align:right;white-space:nowrap">
                       <button class="link" data-toggle-acc="${account.id}" data-on="${account.enabled === false ? '0' : '1'}">${account.enabled === false ? '启用' : '停用'}</button>
                       <button class="link" data-del-acc="${account.id}">删除</button>
@@ -597,7 +694,7 @@
 
             const rowsHtml = rows.length
               ? `<table style="margin-top:8px">
-                  <thead><tr><th>账号</th><th style="width:80px">状态</th><th style="width:120px">今日额度</th><th style="width:80px">余额</th><th style="width:80px">速度</th><th></th></tr></thead>
+                  <thead><tr><th>账号</th><th style="width:80px">状态</th><th style="width:120px">今日额度</th><th style="width:100px">余额</th><th></th></tr></thead>
                   <tbody>${rows.join('')}</tbody>
                 </table>`
               : `<p class="hint" style="margin:6px 0 0">没有账号。点“一键登录”打开官网登录，登录完成后账号会自动出现在这里。</p>`
@@ -615,22 +712,27 @@
               </div>
             </details>`
 
-            return `<div style="border:1px solid var(--line-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px">
-              <div class="row">
-                <div class="grow">
-                  <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${provider.color};margin-right:8px"></span>
-                  <strong>${provider.label}</strong>
-                  <span class="muted" style="margin-left:8px">${provider.claimable ? '支持每日签到' : '仅额度查询'} · ${provider.accounts} 个账号</span>
+            const providerKey = `provider:${provider.id}`
+            return `<details class="group" data-group="${providerKey}"${isGroupOpen(providerKey) ? ' open' : ''}>
+              <summary>
+                <span class="swatch" style="background:${provider.color}"></span>
+                <strong>${provider.label}</strong>
+                <span class="muted">${mine.length} 个账号${modelCount ? ` · ${modelCount} 个模型` : ''}</span>
+                <span class="grow-count">${summaryTags}</span>
+              </summary>
+              <div class="body">
+                <div class="row" style="margin-bottom:10px">
+                  <div class="grow">
+                    <label class="check"><input type="checkbox" data-provider="${provider.id}"${provider.enabled ? ' checked' : ''} /> 启用这个服务</label>
+                    <span class="hint" style="margin:0 0 0 12px">${provider.claimable ? '支持每日签到' : '仅额度查询'}</span>
+                  </div>
+                  <div class="tail"><button class="ghost" data-login="${provider.id}">一键登录</button></div>
                 </div>
-                <div class="tail">
-                  <label class="check"><input type="checkbox" data-provider="${provider.id}"${provider.enabled ? ' checked' : ''} /> 启用</label>
-                  <button class="link" data-login="${provider.id}">一键登录</button>
-                </div>
+                ${modelsHtml(provider)}
+                ${rowsHtml}
+                ${addHtml}
               </div>
-              ${modelsHtml(provider)}
-              ${rowsHtml}
-              ${addHtml}
-            </div>`
+            </details>`
           })
           .join('')
 
@@ -655,13 +757,15 @@
         document.querySelectorAll('[data-model-pick]').forEach((select) => {
           select.onchange = () => pickProviderModel(select.dataset.modelPick, select.value)
         })
+        trackGroups(list)
       }
 
       /**
        * The models of one service, with a switch for every one of them.
        *
        * The user can pick the model this service answers with and switch the
-       * models off one by one.
+       * models off one by one. The list is folded away, because some services
+       * carry dozens of models.
        */
       function modelsHtml(provider) {
         const models = (state.catalog?.models ?? []).filter(
@@ -673,6 +777,8 @@
 
         const disabled = new Set(state.catalog?.settings?.disabledModels ?? [])
         const chosen = state.catalog?.settings?.providerModels?.[provider.id] ?? ''
+        const offCount = models.filter((model) => disabled.has(model.id)).length
+
         const rows = models
           .map((model) => {
             const off = disabled.has(model.id)
@@ -695,16 +801,24 @@
           )
           .join('')
 
-        return `<div style="margin-top:10px">
-          <div class="row">
-            <div class="label">默认模型</div>
-            <div class="grow"><select data-model-pick="${provider.id}"><option value="">自动</option>${options}</select></div>
+        const key = `models:${provider.id}`
+        return `<details class="group" data-group="${key}"${isGroupOpen(key) ? ' open' : ''} style="margin-top:8px;background:var(--surface)">
+          <summary>
+            <strong class="muted" style="font-weight:500">模型</strong>
+            <span class="muted">${models.length} 个${offCount ? ` · ${offCount} 个已禁用` : ''}</span>
+            <span class="grow-count"></span>
+          </summary>
+          <div class="body">
+            <div class="row" style="margin-bottom:8px">
+              <div class="label">默认模型</div>
+              <div class="grow"><select data-model-pick="${provider.id}"><option value="">自动</option>${options}</select></div>
+            </div>
+            <table>
+              <thead><tr><th>模型</th><th style="width:140px">厂商</th><th>标识</th><th style="width:70px"></th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
           </div>
-          <table style="margin-top:8px">
-            <thead><tr><th>模型</th><th style="width:140px">厂商</th><th>标识</th><th style="width:70px"></th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>`
+        </details>`
       }
 
       function renderCredit() {
@@ -745,7 +859,7 @@
           line('上次领取', last
             ? `${new Date(last.at).toLocaleString()}（+${last.credit ?? 0}）`
             : '—'),
-          line('各软件今日领取', channelSummaryHtml()),
+          line('第三方渠道今日领取', channelSummaryHtml()),
         ]
         box.innerHTML = rows.join('')
 
@@ -765,6 +879,8 @@
        * Which service gave out its daily allowance today.
        *
        * The user wants to see, per service, whether it has been claimed yet.
+       * The same numbers are shown in the channel block, so this stays a
+       * compact one-liner that points there.
        */
       function channelSummaryHtml() {
         const channels = state.channels
@@ -777,25 +893,19 @@
         for (const account of accounts) {
           const checked = account.checkin?.todayCheckedIn
           const key = account.provider
-          if (!groups.has(key)) groups.set(key, { provider: providers.get(key), claimed: 0, pending: 0, unknown: 0 })
+          if (!groups.has(key)) groups.set(key, { provider: providers.get(key), claimed: 0, pending: 0 })
           const group = groups.get(key)
           if (checked === true) group.claimed += 1
           else if (checked === false) group.pending += 1
-          else group.unknown += 1
         }
-        const rows = [...groups.values()]
-          .map((group) => {
-            const label = group.provider?.label ?? '—'
-            const parts = []
-            if (group.claimed) parts.push(`<span class="tag on">已领 ${group.claimed}</span>`)
-            if (group.pending) parts.push(`<span class="tag">未领 ${group.pending}</span>`)
-            if (group.unknown) parts.push(`<span class="muted">未知 ${group.unknown}</span>`)
-            return `<div style="display:flex;gap:8px;align-items:center;margin-top:4px">
-              <span style="min-width:120px">${label}</span>${parts.join(' ')}
-            </div>`
-          })
-          .join('')
-        return `<div>${rows}</div>`
+        const tags = [...groups.values()].map((group) => {
+          const label = group.provider?.label ?? '—'
+          const parts = []
+          if (group.claimed) parts.push(`已领 ${group.claimed}`)
+          if (group.pending) parts.push(`未领 ${group.pending}`)
+          return `<span class="tag${group.pending ? '' : ' on'}">${label} ${parts.join(' · ')}</span>`
+        })
+        return `<div style="display:flex;gap:6px;flex-wrap:wrap">${tags.join('')}</div>`
       }
 
       function clientRow(key, title, info) {
@@ -853,15 +963,20 @@
       }
 
       $('btnRefreshModels').onclick = async () => {
+        const button = $('btnRefreshModels')
+        button.disabled = true
         try {
           const result = await api('/api/models/refresh', { method: 'POST' })
+          // The channels have their own state, so read that too.
+          await api('/api/channels/status').catch(() => {})
           toast(result.models.length ? `已刷新 ${result.models.length} 个模型` : '没有读到模型，请检查登录态')
           await refresh()
         } catch (error) {
           toast(error.message, true)
+        } finally {
+          button.disabled = false
         }
       }
-
       $('btnSave').onclick = async () => {
         const routes = [...document.querySelectorAll('#routeTable tbody tr')].map((tr) => ({
           name: tr.querySelector('.rname').value.trim(),
