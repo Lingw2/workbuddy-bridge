@@ -49,6 +49,7 @@ async function startBridge() {
   })
   await bridge.startGateway()
   bridge.loadModels().catch(() => {})
+  bridge.startCreditScheduler()
   bridge.uiServer = await startUiServer({ app: bridge, port: UI_PORT })
 }
 

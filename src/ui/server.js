@@ -140,6 +140,25 @@ export async function startUiServer({ app, port }) {
       return
     }
 
+    if (url.pathname === '/api/credit/status' && req.method === 'GET') {
+      try {
+        json(res, 200, { ok: true, ...(await app.credit.status()) })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
+    if (url.pathname === '/api/credit/claim' && req.method === 'POST') {
+      try {
+        const summary = await app.credit.claim({ reason: 'manual' })
+        json(res, 200, { ok: true, ...summary })
+      } catch (error) {
+        json(res, 200, { ok: false, error: error.message })
+      }
+      return
+    }
+
     if (url.pathname === '/api/logs' && req.method === 'GET') {
       json(res, 200, { lines: tailLog(Number(url.searchParams.get('lines') ?? '200')) })
       return
@@ -181,6 +200,7 @@ async function collectState(app) {
       codex: config.codex,
       claude: config.claude,
       clients: config.clients,
+      credit: config.credit,
       logLevel: config.logLevel,
     },
     models,
@@ -197,6 +217,7 @@ async function collectState(app) {
     claudeCode: readClaudeCodeState(),
     claudeDesktop: readClaudeDesktopState(),
     ccSwitch,
+    credit: await collectCredit(app),
     autoStart: app.autoStart
       ? { supported: true, enabled: await app.autoStart.isEnabled() }
       : { supported: false, enabled: false },
@@ -210,6 +231,17 @@ async function collectState(app) {
       owned: app.servers.some((server) => server.name === entry.name),
     })),
     logs: tailLog(120),
+  }
+}
+
+/** The credit state, without letting a billing failure break the page. */
+async function collectCredit(app) {
+  const settings = app.credit.settings
+  try {
+    const status = await app.credit.status()
+    return { supported: true, ...status }
+  } catch (error) {
+    return { supported: true, settings, error: error.message }
   }
 }
 

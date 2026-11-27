@@ -58,10 +58,23 @@ node bin/workbuddy-bridge.js doctor
 
 `.gitignore` 已经覆盖了大部分，提交前再扫一眼 `git status`。
 
+## 每日积分功能
+
+`src/credit/service.js` 负责每天自动领积分，`src/upstream/credit.js` 是那套 billing 接口的封装。
+
+- **上游是幂等的** —— 当天重复签到只会返回「今天已签到，请明天再来」。所以代码仍然先查 `today_checked_in` 再决定要不要领，因为「今天领过了」和「今天领到了」是两回事。
+- **按本地日历日切分**，跨零点自动开始新的一天；状态落在 `~/.workbuddy-bridge/credit-state.json`，进程重启不重复领。
+- **每个通道互相独立**。一次性活动挂了不影响每日签到。
+- **失败退避重试**（1/5/15/30/60 分钟），不硬打上游。
+- **只有上游标成 `available` 的阶梯才兑**，锁定状态绝不发写请求。
+- 测试用本地 mock 上游（`test/credit.test.mjs`、`test/credit-service.test.mjs`），不连真实上游 —— 真实上游一天只能领一次，测不了第二次。
+
+改 billing 接口时注意路径前缀不统一：`checkin-activity-status` 和 `daily-checkin` 带 `/v2`，而 `compensation-status` / `check-gift-claimed` / `claim-*` **不带** `/v2`（带了会 404）。
+
 ## 提交前自查
 
 ```bash
-node --test test/
+node --test "test/**/*.test.mjs"
 node bin/workbuddy-bridge.js status
 git diff --stat
 ```

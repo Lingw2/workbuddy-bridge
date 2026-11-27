@@ -7,7 +7,7 @@ release/
 out/
 *.blockmap
 
-# local runtime state — contains access tokens
+# local runtime state - contains access tokens
 .workbuddy-bridge/
 config.json
 *.local.json

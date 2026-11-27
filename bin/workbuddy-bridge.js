@@ -51,6 +51,7 @@ async function commandUi() {
   const app = new App(loadConfig())
   await app.startGateway()
   await app.loadModels()
+  app.startCreditScheduler()
   app.uiServer = await startUiServer({ app, port: UI_PORT })
   const url = `http://127.0.0.1:${UI_PORT}/`
   console.log(`\n  WorkBuddy Bridge`)
@@ -68,6 +69,7 @@ async function commandStart() {
   const app = new App(loadConfig())
   await app.startGateway()
   await app.loadModels()
+  app.startCreditScheduler()
   console.log('Gateway running. Press Ctrl+C to stop.')
   await new Promise(() => {})
 }
@@ -241,6 +243,42 @@ async function commandUninstall(targets) {
   console.log('')
 }
 
+/** `credit`: show the WorkBuddy credit state. */
+async function commandCredit() {
+  const app = new App(loadConfig())
+  const status = await app.credit.status()
+  const checkin = status.checkin ?? {}
+  const balance = status.balance ?? {}
+  const streak = status.streak ?? {}
+  const benefits = status.benefits ?? {}
+
+  console.log('\n  WorkBuddy credits\n  ───────────────────')
+  console.log(`  daily check-in   ${checkin.todayCheckedIn ? 'already claimed today' : 'not claimed yet'}`)
+  console.log(`  daily credit     ${checkin.dailyCredit ?? 0}`)
+  console.log(`  streak           ${checkin.streakDays ?? 0} days`)
+  console.log(`  balance          ${balance.remaining ?? 0} / ${balance.total ?? 0}`)
+  console.log(`  growth tiers     ${(streak.availableTiers ?? []).join(', ') || 'none available'}`)
+  console.log(`  compensation     ${benefits.compensation?.active ? (benefits.compensation.claimed ? 'claimed' : 'claimable') : 'inactive'}`)
+  console.log(`  gift             ${benefits.gift?.active ? (benefits.gift.claimed ? 'claimed' : 'claimable') : 'inactive'}`)
+  console.log(`  automatic        ${status.settings.enabled ? `every day at ${status.settings.time}` : 'off'}`)
+  if (status.lastClaim) {
+    console.log(`  last claim       ${new Date(status.lastClaim.at).toLocaleString()} (+${status.lastClaim.credit})`)
+  }
+  console.log('')
+}
+
+/** `claim`: claim every credit channel that is open right now. */
+async function commandClaim() {
+  const app = new App(loadConfig())
+  const summary = await app.credit.claim({ reason: 'manual' })
+  console.log('')
+  for (const entry of summary.results ?? []) {
+    const mark = entry.ok ? (entry.claimed ? `+${entry.credit}` : 'skip') : 'fail'
+    console.log(`  ${entry.channel.padEnd(16)} ${mark.padEnd(6)} ${entry.message ?? ''}`)
+  }
+  console.log(`\n  total credit: ${summary.credit}\n`)
+}
+
 /** Run a command and keep the process alive for the long-running ones. */
 async function main() {
   const [command = 'ui', ...rest] = process.argv.slice(2)
@@ -260,6 +298,10 @@ async function main() {
       return commandInstall(rest)
     case 'uninstall':
       return commandUninstall(rest)
+    case 'credit':
+      return commandCredit()
+    case 'claim':
+      return commandClaim()
     case 'help':
     case '--help':
     case '-h':
@@ -288,6 +330,8 @@ function readHelp() {
     install [targets]  write the configuration into codex / claude-code /
                        claude-desktop (all three by default)
     uninstall [targets] remove the bridge configuration again
+    credit             show the WorkBuddy credit and check-in state
+    claim              claim every open WorkBuddy credit channel now
 
   Environment:
     WORKBUDDY_BRIDGE_UI_PORT   port for the configuration page (default 4477)

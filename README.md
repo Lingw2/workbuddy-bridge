@@ -26,6 +26,7 @@ Windows 上是一个**桌面软件**：装完双击打开，配置界面在窗�
 - **Claude 桌面版兼容** —— 桌面版只接受 `claude-*` 形式的模型名，工具在网关侧做映射；自动生成 `claude-sonnet-5` / `claude-opus-5` / `claude-fable-5` / `claude-haiku-4-5` 四条路由。
 - **模型目录自动同步** —— 把 WorkBuddy 里的模型写进 Codex 的模型目录，桌面版模型选择器里直接能选。
 - **cc-switch 保护** —— 如果你装了 cc-switch（会改写同一批配置文件的切换器），工具会注册自己为 provider 并设为当前，避免它把配置改回去。
+- **每天自动领积分** —— WorkBuddy 每天签到可以免费拿积分，工具能按你设定的时间自动签到、领取一次性活动、兑换连续签到阶梯。
 - **只读本机、回环地址** —— 网关只监听 127.0.0.1，拒绝非回环的 Host / Origin，带 Bearer 令牌。
 - **命令行同样可用** —— 桌面软件里改的东西，命令行都能改，两边共用同一套配置文件。
 
@@ -109,6 +110,8 @@ workbuddy-bridge models            # 列出账号可用的模型
 workbuddy-bridge install           # 写配置（codex / claude-code / claude-desktop）
 workbuddy-bridge install codex cc-switch
 workbuddy-bridge uninstall         # 移除写入的配置
+workbuddy-bridge credit            # 看今天的签到状态、余额、可兑换阶梯
+workbuddy-bridge claim             # 立刻把所有还开着的积分通道领一遍
 ```
 
 环境变量：`WORKBUDDY_BRIDGE_UI_PORT`（配置页端口，默认 4477）。
@@ -122,6 +125,7 @@ workbuddy-bridge uninstall         # 移除写入的配置
 | **账号** | 显示当前登录态（区域 / 域名 / 来源 / 有效期），列出发现的账号文件，点「刷新模型列表」重新拉取。 |
 | **客户端接入** | 逐个或一键写入 Codex、Claude Code、Claude 桌面版的配置。 |
 | **模型与路由** | 选 Codex / Claude 的默认模型、推理强度；编辑 Claude 路由表（路由名 → WorkBuddy 模型、档位、是否默认）。 |
+| **每日领取积分** | 显示今天的签到状态、每日积分、连续天数、余额、可兑换阶梯；设置每天自动领取的时间和开关；点「立即领取」手动领一次。 |
 | **网关** | 查看两个网关是否在跑，修改端口，查看/复制令牌，开机自启开关。 |
 | **日志** | 网关最近 200 行日志。 |
 
@@ -161,7 +165,6 @@ workbuddy-bridge uninstall         # 移除写入的配置
 - **Messages ↔ chat**：Anthropic 的 `system` 数组、`content` typed blocks、`tool_use` / `tool_result`、`thinking` 块与 chat 互转。
 
 ### 4. 上游 channel gate
-
 WorkBuddy 上游会检查 `system` / `assistant` 消息的措辞，命中别的 agent 的身份特征就返回 `11128`。实测下来：
 
 - 匹配是**大小写不敏感的任意位置子串匹配**，不是前缀匹配；
@@ -177,6 +180,30 @@ Claude Code 的系统提示里有两处会被拒，工具在转发前自动改�
 
 规则在 `src/gateway/rewrite.js`，改上游或换客户端版本时按需增减。
 
+### 5. 每日自动领取积分
+
+WorkBuddy 的积分走 `https://www.codebuddy.cn`（国际站是 `https://www.workbuddy.ai`）这套 billing 接口，和聊天接口不是同一个 host。工具复用同一份登录态，调用的端点有：
+
+| 通道 | 接口 | 说明 |
+| --- | --- | --- |
+| **每日签到** | `POST /v2/billing/meter/daily-checkin` | 每天 100 积分，连续签到有 streak 计数。**上游是幂等的**，当天重复调用只会返回「今天已签到，请明天再来」。 |
+| 签到状态 | `POST /v2/billing/meter/checkin-activity-status` | `today_checked_in` 决定今天还需不需要领。 |
+| 补偿活动 | `POST /billing/meter/claim-compensation` | 一次性活动，上游自己开关。 |
+| 新人礼 | `POST /billing/meter/claim-gift` | 每人一次。 |
+| 连续签到阶梯 | `POST /activity/growth/redeem` | 7/14/28 天档，14 天给 50 分、28 天给 150 分，只有上游标成 `available` 的档才能兑。 |
+| Buddy 旅行奖励 | `POST /v2/activity/growth/buddy/travel/claim` | 由消息中心 `growth.travel_arrival` 消息触发。 |
+| 余额 | `POST /v2/billing/meter/get-user-resource` | 积分包列表，能看到每个包的发来源（`daily_checkin` / `welcome_gift` 等）。 |
+
+自动领取的逻辑在 `src/credit/service.js`：
+
+- 按**本地日历日**切分，跨零点自动开始新的一天；
+- 先查 `today_checked_in`，已签就跳过，不去打扰上游；
+- 每个通道互相独立 —— 一次性活动挂了不影响每日签到；
+- 失败按 1/5/15/30/60 分钟退避重试，不硬打；
+- 状态存在 `~/.workbuddy-bridge/credit-state.json`，进程重启也不会重复领。
+
+配置界面「每日领取积分」区块可以设置时间（本地时间，默认 09:00）和开关，也可以点「立即领取」手动领一次。
+
 ---
 
 ## 配置写在哪
@@ -187,7 +214,7 @@ Claude Code 的系统提示里有两处会被拒，工具在转发前自动改�
 | Claude Code | `~/.claude/settings.json` |
 | Claude 桌面版 | `%LOCALAPPDATA%\Claude-3p\configLibrary\00000000-0000-4000-8000-000000157210.json` |
 | cc-switch | `~/.cc-switch/cc-switch.db`（provider 表）、`~/.cc-switch/settings.json`、`~/.cc-switch/live-state.json` |
-| 本工具 | `~/.workbuddy-bridge/config.json`、`~/.workbuddy-bridge/session.json` |
+| 本工具 | `~/.workbuddy-bridge/config.json`、`~/.workbuddy-bridge/session.json`、`~/.workbuddy-bridge/credit-state.json` |
 
 桌面软件和命令行版读写的是同一份文件，两边可以混用。
 
@@ -199,6 +226,7 @@ Claude Code 的系统提示里有两处会被拒，工具在转发前自动改�
 - **Codex 0.163.0 只支持 Responses API**。`wire_api = "chat"` 已被官方移除，工具因此自己实现了 `/v1/responses`。
 - **Claude 桌面版的 `inferenceModels` 必须是 `claude-*` 形式**，桌面版会拒绝含 `deepseek` / `glm` / `kimi` / `gpt` 等字样的 id。
 - **cc-switch 必须在退出状态下才能写它的数据库**。跑着的时候工具会跳过这一步并提示。
+- **积分活动以官方为准**。一次性活动（补偿 / 新人礼）由上游自己开关，工具只在上游说还开着的时候去领；连续签到阶梯只有满 7/14/28 天才解锁。工具不会绕过任何规则。
 - **安装包没有代码签名**，Windows SmartScreen 会提示未知发布者（见上面「Windows 提示『未知发布者』？」）。
 - 工具读写的是别人的账号数据，用在哪儿、怎么用，请自己判断。
 
@@ -207,7 +235,7 @@ Claude Code 的系统提示里有两处会被拒，工具在转发前自动改�
 ## 开发
 
 ```bash
-npm test                   # 协议转换的单元测试
+npm test                   # 协议转换 + 积分流程的单元测试
 npm run smoke              # 对着真实网关跑一轮端到端
 npm run desktop            # 开发模式启动桌面软件
 npm run icon               # 重新生成图标
@@ -219,8 +247,9 @@ node bin/workbuddy-bridge.js doctor
 ```
 bin/            CLI 入口
 desktop/        Electron 桌面外壳：窗口、托盘、开机自启
-src/app.js      应用容器：网关、模型、UI
-src/upstream/   WorkBuddy 上游：凭据、模型目录、SSE
+src/app.js      应用容器：网关、模型、积分、UI
+src/upstream/   WorkBuddy 上游：凭据、模型目录、SSE、积分接口
+src/credit/     每日自动领取积分：调度器、状态落盘
 src/gateway/    协议转换层：Anthropic / Responses / 改写
 src/config/     客户端配置读写：Codex / Claude / cc-switch / TOML
 src/ui/         配置页（原生 HTML + JS，无构建步骤）

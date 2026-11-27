@@ -9,6 +9,7 @@ import { LOG_DIR } from './config/paths.js'
 import { loadConfig, saveConfig } from './config/store.js'
 import { Bridge } from './gateway/bridge.js'
 import { GatewayServer } from './gateway/server.js'
+import { CreditService } from './credit/service.js'
 
 /** A logger that writes to the log file and the console. */
 export function createLogger(level = 'info') {
@@ -34,6 +35,8 @@ export class App {
     this.config = config
     this.logger = createLogger(config.logLevel)
     this.bridge = new Bridge(config, this.logger)
+    /** The daily WorkBuddy credit claim. */
+    this.credit = new CreditService(config, this.logger)
     this.servers = []
     this.uiServer = null
     /** Ports served by a gateway this process did not start. */
@@ -119,8 +122,14 @@ export class App {
     }
   }
 
+  /** Start the daily credit scheduler. */
+  startCreditScheduler() {
+    this.credit.start()
+  }
+
   /** Stop every server. */
   async stop() {
+    this.credit.stop()
     for (const server of this.servers) await server.stop()
     this.servers = []
     if (this.uiServer) {
@@ -133,6 +142,7 @@ export class App {
   updateConfig(next) {
     this.config = saveConfig(next)
     this.bridge.config = this.config
+    this.credit.config = this.config
     return this.config
   }
 }

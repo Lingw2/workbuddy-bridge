@@ -261,6 +261,35 @@
       </div>
 
       <div class="block">
+        <h2>每日领取积分</h2>
+        <p class="sub2">WorkBuddy 每天可免费签到领取积分，这里可以设置成自动领取。</p>
+        <div class="stack" id="creditBox"></div>
+        <div class="stack" style="margin-top:14px">
+          <div class="row">
+            <div class="label">自动领取</div>
+            <div class="grow">
+              <label class="check"><input type="checkbox" id="creditEnabled" /> 每天自动领取积分</label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="label">领取时间</div>
+            <div class="grow"><input type="text" id="creditTime" placeholder="09:00" style="max-width:120px" /></div>
+            <div class="tail hint" style="margin:0">本地时间</div>
+          </div>
+          <div class="row">
+            <div class="label">额外活动</div>
+            <div class="grow">
+              <label class="check"><input type="checkbox" id="creditBenefits" /> 同时领取一次性活动（补偿 / 新人礼 / 连续签到阶梯）</label>
+            </div>
+          </div>
+        </div>
+        <div class="actions" style="margin-top:16px">
+          <button id="btnClaimNow">立即领取</button>
+          <button class="ghost" id="btnCreditRefresh">刷新状态</button>
+        </div>
+      </div>
+
+      <div class="block">
         <h2>日志</h2>
         <pre id="logs"></pre>
       </div>
@@ -402,6 +431,56 @@
         $('autoStart').checked = Boolean(autoStart.enabled)
 
         $('logs').textContent = (state.logs ?? []).join('\n')
+        renderCredit()
+      }
+
+      function renderCredit() {
+        const credit = state.credit
+        const box = $('creditBox')
+        if (!credit) {
+          box.innerHTML = `<p class="hint" style="margin:0">正在读取积分状态…</p>`
+          return
+        }
+        if (credit.error && !credit.checkin) {
+          box.innerHTML = `<p class="hint" style="margin:0">读取失败：${credit.error}</p>`
+          return
+        }
+
+        const checkin = credit.checkin ?? {}
+        const balance = credit.balance ?? {}
+        const streak = credit.streak ?? {}
+        const benefits = credit.benefits ?? {}
+        const last = credit.lastClaim
+
+        const rows = [
+          line('今日状态', checkin.todayCheckedIn
+            ? `<span class="tag on">已签到</span>`
+            : `<span class="tag">未签到</span>`),
+          line('每日积分', `${checkin.dailyCredit ?? 0} 分`),
+          line('连续签到', `${checkin.streakDays ?? 0} 天`),
+          line('积分余额', balance.error
+            ? '读取失败'
+            : `${balance.remaining ?? 0} / ${balance.total ?? 0} 分`),
+          line('成长阶梯', (streak.availableTiers?.length)
+            ? `可兑换 ${streak.availableTiers.join(' / ')}`
+            : `已连续 ${streak.days ?? 0} 天，下一档还差 ${streak.nextTierRemaining ?? 0} 天`),
+          line('一次性活动',
+            [
+              benefits.compensation?.active && !benefits.compensation?.claimed ? '补偿可领' : '',
+              benefits.gift?.active && !benefits.gift?.claimed ? '新人礼可领' : '',
+            ].filter(Boolean).join(' · ') || '暂无'),
+          line('上次领取', last
+            ? `${new Date(last.at).toLocaleString()}（+${last.credit ?? 0}）`
+            : '—'),
+        ]
+        box.innerHTML = rows.join('')
+
+        const settings = credit.settings ?? state.config.credit ?? {}
+        $('creditEnabled').checked = Boolean(settings.enabled)
+        if (document.activeElement !== $('creditTime')) {
+          $('creditTime').value = settings.time ?? '09:00'
+        }
+        $('creditBenefits').checked = settings.autoBenefits !== false
       }
 
       function line(key, value) {
@@ -475,9 +554,51 @@
                 port: Number($('claudePort').value),
                 routes,
               },
+              credit: {
+                enabled: $('creditEnabled').checked,
+                time: $('creditTime').value.trim() || '09:00',
+                autoBenefits: $('creditBenefits').checked,
+              },
             },
           })
           toast('设置已保存')
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      $('btnClaimNow').onclick = async () => {
+        const button = $('btnClaimNow')
+        button.disabled = true
+        button.textContent = '领取中…'
+        try {
+          const result = await api('/api/credit/claim', { method: 'POST' })
+          if (!result.ok) {
+            toast(result.error ?? '领取失败', true)
+          } else {
+            const claimed = (result.results ?? []).filter((entry) => entry.claimed)
+            const skipped = (result.results ?? []).filter((entry) => entry.skipped)
+            if (claimed.length) {
+              toast(`领取成功，共 ${result.credit} 积分`)
+            } else if (skipped.length) {
+              toast(skipped[0].message ?? '今天已经领过了')
+            } else {
+              toast('暂时没有可领取的积分')
+            }
+          }
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        } finally {
+          button.disabled = false
+          button.textContent = '立即领取'
+        }
+      }
+
+      $('btnCreditRefresh').onclick = async () => {
+        try {
+          await api('/api/credit/status')
           await refresh()
         } catch (error) {
           toast(error.message, true)

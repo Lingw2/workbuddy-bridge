@@ -38,6 +38,14 @@ export const DEFAULTS = {
     claudeCode: true,
     claudeDesktop: true,
   },
+  credit: {
+    /** Claim the daily WorkBuddy credit every day. */
+    enabled: false,
+    /** Local time of day for the automatic claim. */
+    time: '09:00',
+    /** Also claim the one-off campaigns while the upstream has them open. */
+    autoBenefits: true,
+  },
   logLevel: 'info',
 }
 
@@ -69,6 +77,7 @@ export function loadConfig() {
     codex: { ...DEFAULTS.codex, ...(stored.codex ?? {}) },
     claude: { ...DEFAULTS.claude, ...(stored.claude ?? {}) },
     clients: { ...DEFAULTS.clients, ...(stored.clients ?? {}) },
+    credit: { ...DEFAULTS.credit, ...(stored.credit ?? {}) },
   }
 
   let generated = false
@@ -117,6 +126,14 @@ export function mergeConfig(current, patch) {
     }
   }
   if (patch.clients) next.clients = { ...current.clients, ...patch.clients }
+  if (patch.credit) {
+    next.credit = { ...current.credit, ...patch.credit }
+    if (typeof next.credit.enabled === 'boolean') next.credit.enabled = next.credit.enabled
+    if (typeof next.credit.time === 'string') next.credit.time = next.credit.time
+    if (typeof next.credit.autoBenefits === 'boolean') {
+      next.credit.autoBenefits = next.credit.autoBenefits
+    }
+  }
   if (typeof patch.logLevel === 'string') next.logLevel = patch.logLevel
   return next
 }
