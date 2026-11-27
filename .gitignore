@@ -1,0 +1,23 @@
+node_modules/
+npm-debug.log*
+*.tgz
+
+# build output
+release/
+out/
+*.blockmap
+
+# local runtime state — contains access tokens
+.workbuddy-bridge/
+config.json
+*.local.json
+
+# diagnostic dumps
+dumps/
+captures/
+*.log
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WorkBuddy Bridge</title>
+    <style>
+      :root {
+        --bg: #f6f7f5;
+        --surface: #ffffff;
+        --line: #dfe3dd;
+        --line-soft: #eceee9;
+        --text: #1b1f1c;
+        --muted: #6b736c;
+        --accent: #1f6f5c;
+        --accent-soft: #e4f0ec;
+        --ok: #1f6f5c;
+        --warn: #9a6512;
+        --err: #b4342b;
+        --radius: 8px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.6 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+      a { color: var(--accent); }
+
+      header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--line);
+        padding: 0 32px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+      }
+      header .logo {
+        width: 26px; height: 26px; border-radius: 6px;
+        background: var(--accent); color: #fff;
+        display: grid; place-items: center;
+        font-weight: 700; font-size: 13px;
+      }
+      header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+      header .sub { color: var(--muted); font-size: 12.5px; }
+      header .spacer { flex: 1; }
+
+      main { max-width: 940px; margin: 0 auto; padding: 28px 32px 80px; }
+
+      .block {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 22px 24px 24px;
+        margin-bottom: 16px;
+      }
+      .block > h2 {
+        font-size: 12px;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0 0 16px;
+        font-weight: 600;
+      }
+      .block > h2 + .sub2 { margin: -8px 0 16px; font-size: 13px; color: var(--muted); }
+
+      .stack > * + * { margin-top: 10px; }
+      .row { display: flex; align-items: center; gap: 12px; }
+      .row .label { width: 176px; flex: none; color: var(--muted); }
+      .row .grow { flex: 1; min-width: 0; }
+      .row .tail { flex: none; }
+
+      .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+
+      input[type="text"], input[type="number"], select {
+        background: #fff;
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 7px 9px;
+        font: inherit;
+        width: 100%;
+        min-width: 0;
+      }
+      input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+      input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--accent); }
+      label.check { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; color: var(--muted); }
+
+      button {
+        background: var(--accent); color: #fff; border: 0; border-radius: 6px;
+        padding: 8px 15px; font: inherit; font-weight: 500; cursor: pointer;
+      }
+      button:hover { background: #1a5c4d; }
+      button.ghost { background: #fff; border: 1px solid var(--line); color: var(--text); }
+      button.ghost:hover { background: var(--line-soft); }
+      button.link {
+        background: none; border: 0; color: var(--accent);
+        padding: 2px 4px; font-weight: 500; text-decoration: underline;
+      }
+      button.link:hover { background: none; color: #174f43; }
+      button:disabled { opacity: .5; cursor: default; }
+
+      .status {
+        display: inline-flex; align-items: center; gap: 7px;
+        font-size: 13px; color: var(--muted);
+      }
+      .dot { width: 7px; height: 7px; border-radius: 50%; background: #b6bdb6; flex: none; }
+      .dot.ok { background: var(--ok); }
+      .dot.err { background: var(--err); }
+      .dot.warn { background: var(--warn); }
+
+      .tag {
+        font-size: 11.5px; color: var(--muted);
+        border: 1px solid var(--line); border-radius: 5px; padding: 1px 7px;
+        display: inline-block;
+      }
+      .tag.on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+      th { color: var(--muted); font-weight: 500; font-size: 12px; }
+      tr:last-child td { border-bottom: 0; }
+
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+      .muted { color: var(--muted); }
+      .hint { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+      .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+      pre {
+        background: #1b1f1c; color: #cdd4ce; border-radius: 6px;
+        padding: 12px 14px; overflow: auto; max-height: 240px; font-size: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        margin: 0;
+      }
+
+      .toast {
+        position: fixed; right: 24px; bottom: 24px; z-index: 50;
+        background: var(--surface); border: 1px solid var(--line);
+        border-left: 3px solid var(--accent);
+        border-radius: 6px; padding: 10px 15px; max-width: 420px;
+        box-shadow: 0 6px 24px rgba(20, 30, 24, .12);
+        opacity: 0; transform: translateY(6px); transition: .16s; pointer-events: none;
+      }
+      .toast.show { opacity: 1; transform: none; }
+      .toast.err { border-left-color: var(--err); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">WB</div>
+      <h1>WorkBuddy Bridge</h1>
+      <span class="sub">把 WorkBuddy 账号里的模型接入 Codex 与 Claude</span>
+      <span class="spacer"></span>
+      <span class="status"><span class="dot" id="acctDot"></span><span id="acctText">检查中…</span></span>
+    </header>
+
+    <main>
+      <div class="block">
+        <h2>账号</h2>
+        <div class="split">
+          <div>
+            <div class="stack" id="sessionBox"></div>
+          </div>
+          <div>
+            <div class="stack" id="sourceBox"></div>
+          </div>
+        </div>
+        <div class="actions" style="margin-top:16px">
+          <button class="ghost" id="btnRefreshModels">刷新模型列表</button>
+          <span class="hint" id="modelCount" style="margin:0"></span>
+        </div>
+      </div>
+
+      <div class="block">
+        <h2>客户端接入</h2>
+        <p class="sub2">写入各客户端的配置文件，让它们指向本机网关。</p>
+        <div class="stack" id="clientList"></div>
+        <div class="actions" style="margin-top:16px">
+          <button id="btnInstallAll">一键接入全部</button>
+          <span class="hint" style="margin:0">同时注册 cc-switch provider，避免它把配置改回去。</span>
+        </div>
+      </div>
+
+      <div class="block">
+        <h2>模型与路由</h2>
+        <div class="stack">
+          <div class="row">
+            <div class="label">Codex 默认模型</div>
+            <div class="grow"><select id="codexModel"></select></div>
+          </div>
+          <div class="row">
+            <div class="label">Claude 默认模型</div>
+            <div class="grow"><select id="claudeModel"></select></div>
+          </div>
+          <div class="row">
+            <div class="label">推理强度</div>
+            <div class="grow">
+              <select id="effort">
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+                <option value="xhigh">xhigh</option>
+                <option value="max">max</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <h2 style="margin:24px 0 4px">Claude 路由表</h2>
+        <p class="hint" style="margin:0 0 10px">Claude 桌面版只接受 <span class="mono">claude-*</span> 形式的模型名，网关在内部映射到 WorkBuddy 模型。</p>
+        <table id="routeTable">
+          <thead>
+            <tr>
+              <th style="width:200px">路由名</th>
+              <th>目标模型</th>
+              <th style="width:110px">档位</th>
+              <th style="width:80px">默认</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="block">
+        <h2>网关</h2>
+        <div class="stack" id="gatewayList"></div>
+        <div class="stack" style="margin-top:16px">
+          <div class="row">
+            <div class="label">Codex 端口</div>
+            <div class="grow"><input type="number" id="codexPort" /></div>
+            <div class="label" style="width:auto">Claude 端口</div>
+            <div class="grow"><input type="number" id="claudePort" /></div>
+          </div>
+          <div class="row">
+            <div class="label">Codex 令牌</div>
+            <div class="grow mono" id="codexToken"></div>
+            <div class="tail"><button class="link" data-copy="codex">复制</button></div>
+          </div>
+          <div class="row">
+            <div class="label">Claude 令牌</div>
+            <div class="grow mono" id="claudeToken"></div>
+            <div class="tail"><button class="link" data-copy="claude">复制</button></div>
+          </div>
+        </div>
+        <div class="actions" style="margin-top:18px">
+          <button id="btnSave">保存设置</button>
+          <button class="ghost" id="btnRestart">重启网关</button>
+        </div>
+        <div class="row" id="autoStartRow" style="margin-top:14px">
+          <div class="label">开机自启</div>
+          <div class="grow">
+            <label class="check"><input type="checkbox" id="autoStart" /> 登录 Windows 时自动启动网关</label>
+          </div>
+          <div class="tail hint" id="autoStartHint" style="margin:0"></div>
+        </div>
+      </div>
+
+      <div class="block">
+        <h2>日志</h2>
+        <pre id="logs"></pre>
+      </div>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      const $ = (id) => document.getElementById(id)
+      const CLIENT_LABEL = {
+        codex: 'Codex',
+        'claude-code': 'Claude Code',
+        'claude-desktop': 'Claude 桌面版',
+        'cc-switch': 'cc-switch',
+      }
+      let state = null
+
+      function toast(message, isError) {
+        const el = $('toast')
+        el.textContent = message
+        el.className = 'toast show' + (isError ? ' err' : '')
+        clearTimeout(el._timer)
+        el._timer = setTimeout(() => (el.className = 'toast'), 3200)
+      }
+
+      async function api(path, options) {
+        const response = await fetch(path, {
+          method: options?.method ?? 'GET',
+          headers: options?.body ? { 'content-type': 'application/json' } : {},
+          body: options?.body ? JSON.stringify(options.body) : undefined,
+        })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(data.error ?? '请求失败')
+        return data
+      }
+
+      function modelOptions(selected) {
+        const models = state?.models ?? []
+        const ids = models.map((m) => m.id)
+        if (selected && !ids.includes(selected)) ids.unshift(selected)
+        return ids
+          .map((id) => {
+            const model = models.find((m) => m.id === id)
+            const label = model && model.name && model.name !== id ? `${model.name} · ${id}` : id
+            return `<option value="${id}"${id === selected ? ' selected' : ''}>${label}</option>`
+          })
+          .join('')
+      }
+
+      function render() {
+        const config = state.config
+        const session = state.session
+
+        $('acctDot').className = 'dot ' + (session ? 'ok' : 'err')
+        $('acctText').textContent = session
+          ? `已连接 ${session.domain}${session.nickname ? ' · ' + session.nickname : ''}`
+          : '未找到 WorkBuddy 登录态'
+
+        $('sessionBox').innerHTML = session
+          ? [
+              line('区域', session.region === 'global' ? '国际站' : '中国站'),
+              line('域名', session.domain),
+              line('来源', session.source?.label ?? '本工具缓存'),
+              line('有效期', session.expiresAt ? new Date(session.expiresAt).toLocaleString() : '—'),
+            ].join('')
+          : `<p class="hint" style="margin:0">请先打开 WorkBuddy 客户端并登录，然后点“刷新模型列表”。</p>`
+
+        const sources = state.sessionSources ?? []
+        $('sourceBox').innerHTML = sources.length
+          ? sources
+              .map(
+                (s) =>
+                  `<div class="row"><div class="grow">${s.label}</div><span class="tag">${s.domain}</span></div>`,
+              )
+              .join('')
+          : `<p class="hint" style="margin:0">没有找到可用的账号文件。</p>`
+
+        $('modelCount').textContent = state.models.length ? `${state.models.length} 个可用模型` : ''
+
+        const clientRows = [
+          clientRow('codex', 'Codex 桌面版 / CLI', state.codex),
+          clientRow('claude-code', 'Claude Code (CLI)', state.claudeCode),
+          clientRow('claude-desktop', 'Claude 桌面版', state.claudeDesktop),
+        ]
+        if (state.ccSwitch?.installed) {
+          clientRows.push(
+            clientRow('cc-switch', 'cc-switch（防护注册）', {
+              installed: state.ccSwitch.current?.some((p) => p.isBridge) ?? false,
+              baseUrl: null,
+              model: null,
+            }),
+          )
+        }
+        $('clientList').innerHTML = clientRows.join('')
+        document.querySelectorAll('[data-install]').forEach((button) => {
+          button.onclick = () => install(button.dataset.install)
+        })
+
+        $('gatewayList').innerHTML = (state.gateway ?? [])
+          .map(
+            (entry) => `<div class="row">
+              <div class="label">${entry.name === 'codex' ? 'Codex' : 'Claude'}</div>
+              <div class="grow mono">http://127.0.0.1:${entry.port}</div>
+              <div class="tail status"><span class="dot ${entry.running ? 'ok' : 'err'}"></span>${
+                entry.running ? (entry.owned ? '本进程运行中' : '已在运行') : '未运行'
+              }</div>
+            </div>`,
+          )
+          .join('')
+
+        $('codexModel').innerHTML = modelOptions(config.codex.model)
+        $('claudeModel').innerHTML = modelOptions(config.claude.model)
+        $('effort').value = config.codex.reasoningEffort ?? 'high'
+
+        $('routeTable').querySelector('tbody').innerHTML = (config.claude.routes ?? [])
+          .map(
+            (route, index) => `<tr>
+              <td><input type="text" class="rname" data-i="${index}" value="${route.name}" /></td>
+              <td><select class="rmodel" data-i="${index}">${modelOptions(route.model)}</select></td>
+              <td><select class="rtier" data-i="${index}">
+                <option value=""${route.tier ? '' : ' selected'}>—</option>
+                <option value="sonnet"${route.tier === 'sonnet' ? ' selected' : ''}>sonnet</option>
+                <option value="opus"${route.tier === 'opus' ? ' selected' : ''}>opus</option>
+                <option value="fable"${route.tier === 'fable' ? ' selected' : ''}>fable</option>
+                <option value="haiku"${route.tier === 'haiku' ? ' selected' : ''}>haiku</option>
+              </select></td>
+              <td><label class="check"><input type="checkbox" class="rdef" data-i="${index}"${route.familyDefault ? ' checked' : ''} /></label></td>
+            </tr>`,
+          )
+          .join('')
+
+        $('codexPort').value = config.codex.port
+        $('claudePort').value = config.claude.port
+        $('codexToken').textContent = config.codex.token
+        $('claudeToken').textContent = config.claude.token
+
+        const autoStart = state.autoStart ?? { supported: false, enabled: false }
+        $('autoStartRow').style.display = autoStart.supported ? '' : 'none'
+        $('autoStart').checked = Boolean(autoStart.enabled)
+
+        $('logs').textContent = (state.logs ?? []).join('\n')
+      }
+
+      function line(key, value) {
+        return `<div class="row"><div class="label">${key}</div><div class="grow">${value}</div></div>`
+      }
+
+      function clientRow(key, title, info) {
+        const installed = Boolean(info?.installed)
+        const detail = installed
+          ? [info.baseUrl, info.model].filter(Boolean).map((v) => `<span class="mono">${v}</span>`).join(' · ') ||
+            '已接入'
+          : '未接入'
+        return `<div class="row">
+          <div class="label">${title}</div>
+          <div class="grow status"><span class="dot ${installed ? 'ok' : ''}"></span><span>${detail}</span></div>
+          <div class="tail"><button class="ghost" data-install="${key}">${installed ? '重新接入' : '接入'}</button></div>
+        </div>`
+      }
+
+      async function install(target) {
+        try {
+          const result = await api('/api/install', { method: 'POST', body: { target } })
+          if (result.ok) {
+            toast(`${CLIENT_LABEL[target] ?? target} 已接入`)
+            await refresh()
+          } else {
+            toast(result.error ?? result.reason ?? '接入失败', true)
+          }
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      async function refresh() {
+        try {
+          state = await api('/api/state')
+          render()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      $('btnRefreshModels').onclick = async () => {
+        try {
+          const result = await api('/api/models/refresh', { method: 'POST' })
+          toast(result.models.length ? `已刷新 ${result.models.length} 个模型` : '没有读到模型，请检查登录态')
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      $('btnSave').onclick = async () => {
+        const routes = [...document.querySelectorAll('#routeTable tbody tr')].map((tr) => ({
+          name: tr.querySelector('.rname').value.trim(),
+          model: tr.querySelector('.rmodel').value,
+          tier: tr.querySelector('.rtier').value || undefined,
+          familyDefault: tr.querySelector('.rdef').checked,
+        }))
+        try {
+          await api('/api/config', {
+            method: 'POST',
+            body: {
+              codex: {
+                model: $('codexModel').value,
+                reasoningEffort: $('effort').value,
+                port: Number($('codexPort').value),
+              },
+              claude: {
+                model: $('claudeModel').value,
+                port: Number($('claudePort').value),
+                routes,
+              },
+            },
+          })
+          toast('设置已保存')
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      $('btnRestart').onclick = async () => {
+        try {
+          await api('/api/gateway/restart', { method: 'POST' })
+          toast('网关已重启')
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      $('autoStart').onchange = async () => {
+        try {
+          const result = await api('/api/autostart', {
+            method: 'POST',
+            body: { enabled: $('autoStart').checked },
+          })
+          if (result.ok) {
+            toast(result.enabled ? '已设置为开机自启' : '已取消开机自启')
+          } else {
+            toast(result.error ?? '设置失败', true)
+          }
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      $('btnInstallAll').onclick = async () => {
+        try {
+          const result = await api('/api/install', { method: 'POST', body: { target: 'all' } })
+          if (result.ok) {
+            const guard = result.guard?.ok === false ? '（cc-switch 未注册：' + result.guard.reason + '）' : ''
+            toast('已接入全部客户端' + guard)
+          } else {
+            toast(result.error ?? '接入失败', true)
+          }
+          await refresh()
+        } catch (error) {
+          toast(error.message, true)
+        }
+      }
+
+      document.querySelectorAll('[data-copy]').forEach((button) => {
+        button.onclick = async () => {
+          const value = button.dataset.copy === 'codex' ? $('codexToken').textContent : $('claudeToken').textContent
+          try {
+            await navigator.clipboard.writeText(value)
+            toast('令牌已复制')
+          } catch {
+            toast('复制失败，请手动选择', true)
+          }
+        }
+      })
+
+      refresh()
+      setInterval(refresh, 5000)
+    </script>
+  </body>
+</html>

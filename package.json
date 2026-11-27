@@ -1,0 +1,85 @@
+{
+  "name": "workbuddy-bridge",
+  "version": "0.1.0",
+  "description": "Use the models in your Tencent WorkBuddy account inside Codex and Claude, with a desktop app and a local config UI.",
+  "author": "WorkBuddy Bridge contributors",
+  "type": "module",
+  "license": "MIT",
+  "main": "desktop/main.js",
+  "bin": {
+    "workbuddy-bridge": "bin/workbuddy-bridge.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "desktop",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node bin/workbuddy-bridge.js start",
+    "ui": "node bin/workbuddy-bridge.js ui",
+    "doctor": "node bin/workbuddy-bridge.js doctor",
+    "test": "node --test \"test/**/*.test.mjs\"",
+    "smoke": "node test/smoke.mjs",
+    "desktop": "electron desktop/main.js",
+    "icon": "node tools/make-icon.mjs",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win nsis"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "keywords": [
+    "workbuddy",
+    "codex",
+    "claude",
+    "gateway",
+    "openai-responses",
+    "anthropic-messages"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lingw2/workbuddy-bridge.git"
+  },
+  "devDependencies": {
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "cn.workbuddy.bridge",
+    "productName": "WorkBuddy Bridge",
+    "copyright": "MIT",
+    "directories": {
+      "output": "release",
+      "buildResources": "desktop/icons"
+    },
+    "files": [
+      "bin/**/*",
+      "src/**/*",
+      "desktop/**/*.js",
+      "desktop/icons/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "desktop/icons/icon-256.png",
+      "artifactName": "WorkBuddy-Bridge-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "WorkBuddy Bridge"
+    }
+  }
+}
