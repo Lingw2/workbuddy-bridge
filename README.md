@@ -1,49 +1,69 @@
 # WorkBuddy Bridge
 
-鎶婅吘璁?WorkBuddy 璐﹀彿閲岀殑妯″瀷锛屾帴杩?**Codex** 鍜?**Claude**锛堟闈㈢増 + CLI锛夈€?
-WorkBuddy 鏈韩涓嶆彁渚涘叕寮€鐨?OpenAI/Anthropic 鍏煎鎺ュ彛锛孋odex 鍜?Claude 涔熷悇璇村悇鐨勫崗璁€傝繖涓伐鍏峰湪鏈満璧蜂竴涓綉鍏筹細
+把腾讯 WorkBuddy 账号里的模型，接进 **Codex** 和 **Claude**（桌面版 + CLI）。
+
+WorkBuddy 本身不提供公开的 OpenAI/Anthropic 兼容接口，Codex 和 Claude 也各说各的协议。这个工具在本机起一个网关：
 
 ```
-Codex 妗岄潰鐗?/ CLI  鈹€鈹€鈻? http://127.0.0.1:4000/v1/responses   (OpenAI Responses API)
-Claude 妗岄潰鐗?/ CLI  鈹€鈹€鈻? http://127.0.0.1:4001/v1/messages    (Anthropic Messages API)
-                           鈹?                           鈻?                    WorkBuddy 涓婃父 (/v2/chat/completions)
+Codex 桌面版 / CLI  ──►  http://127.0.0.1:4000/v1/responses   (OpenAI Responses API)
+Claude 桌面版 / CLI  ──►  http://127.0.0.1:4001/v1/messages    (Anthropic Messages API)
+                           │
+                           ▼
+                    WorkBuddy 上游 (/v2/chat/completions)
 ```
 
-Windows 涓婃槸涓€涓?*妗岄潰杞欢**锛氳瀹屽弻鍑绘墦寮€锛岄厤缃晫闈㈠湪绐楀彛閲岋紝缃戝叧璺熺潃绋嬪簭涓€璧疯窇锛屽叧鎺夌獥鍙ｅ畠缁х画鍦ㄦ墭鐩橀噷寰呯潃銆?
-![妗岄潰杞欢](docs/desktop-shot.png)
+Windows 上是一个**桌面软件**：装完双击打开，配置界面在窗口里，网关跟着程序一起跑，关掉窗口它继续在托盘里待着。
+
+![桌面软件](docs/desktop-shot.png)
 
 ---
 
-## 鐗规€?
-- **涓嶉渶瑕?WorkBuddy 瀹樻柟 API Key** 鈥斺€?鐩存帴澶嶇敤妗岄潰瀹㈡埛绔凡缁忕櫥褰曠殑浼氳瘽锛孴oken 杩囨湡鑷姩鍒锋柊銆?- **Windows 妗岄潰杞欢** 鈥斺€?瀹夎鍖呭弻鍑诲嵆鐢紝涓嶇敤瑁?Node锛涚晫闈€佺綉鍏炽€佸紑鏈鸿嚜鍚兘鍦ㄤ竴涓▼搴忛噷銆?- **涓や釜鍗忚鍚勪竴涓鍙?* 鈥斺€?Codex 鍙蛋 Responses API锛孋laude 鍙蛋 Messages API锛屼簰涓嶅共鎵般€?- **Claude 妗岄潰鐗堝吋瀹?* 鈥斺€?妗岄潰鐗堝彧鎺ュ彈 `claude-*` 褰㈠紡鐨勬ā鍨嬪悕锛屽伐鍏峰湪缃戝叧渚у仛鏄犲皠锛涜嚜鍔ㄧ敓鎴?`claude-sonnet-5` / `claude-opus-5` / `claude-fable-5` / `claude-haiku-4-5` 鍥涙潯璺敱銆?- **妯″瀷鐩綍鑷姩鍚屾** 鈥斺€?鎶?WorkBuddy 閲岀殑妯″瀷鍐欒繘 Codex 鐨勬ā鍨嬬洰褰曪紝妗岄潰鐗堟ā鍨嬮€夋嫨鍣ㄩ噷鐩存帴鑳介€夈€?- **cc-switch 淇濇姢** 鈥斺€?濡傛灉浣犺浜?cc-switch锛堜細鏀瑰啓鍚屼竴鎵归厤缃枃浠剁殑鍒囨崲鍣級锛屽伐鍏蜂細娉ㄥ唽鑷繁涓?provider 骞惰涓哄綋鍓嶏紝閬垮厤瀹冩妸閰嶇疆鏀瑰洖鍘汇€?- **鍙鏈満銆佸洖鐜湴鍧€** 鈥斺€?缃戝叧鍙洃鍚?127.0.0.1锛屾嫆缁濋潪鍥炵幆鐨?Host / Origin锛屽甫 Bearer 浠ょ墝銆?- **鍛戒护琛屽悓鏍峰彲鐢?* 鈥斺€?妗岄潰杞欢閲屾敼鐨勪笢瑗匡紝鍛戒护琛岄兘鑳芥敼锛屼袱杈瑰叡鐢ㄥ悓涓€濂楅厤缃枃浠躲€?
+## 特性
+
+- **不需要 WorkBuddy 官方 API Key** —— 直接复用桌面客户端已经登录的会话，Token 过期自动刷新。
+- **Windows 桌面软件** —— 安装包双击即用，不用装 Node；界面、网关、开机自启都在一个程序里。
+- **两个协议各一个端口** —— Codex 只走 Responses API，Claude 只走 Messages API，互不干扰。
+- **Claude 桌面版兼容** —— 桌面版只接受 `claude-*` 形式的模型名，工具在网关侧做映射；自动生成 `claude-sonnet-5` / `claude-opus-5` / `claude-fable-5` / `claude-haiku-4-5` 四条路由。
+- **模型目录自动同步** —— 把 WorkBuddy 里的模型写进 Codex 的模型目录，桌面版模型选择器里直接能选。
+- **cc-switch 保护** —— 如果你装了 cc-switch（会改写同一批配置文件的切换器），工具会注册自己为 provider 并设为当前，避免它把配置改回去。
+- **只读本机、回环地址** —— 网关只监听 127.0.0.1，拒绝非回环的 Host / Origin，带 Bearer 令牌。
+- **命令行同样可用** —— 桌面软件里改的东西，命令行都能改，两边共用同一套配置文件。
+
 ---
 
-## 鐜瑕佹眰
+## 环境要求
 
-| 椤圭洰 | 瑕佹眰 |
+| 项目 | 要求 |
 | --- | --- |
-| 妗岄潰杞欢 | Windows 10/11 x64锛堝畨瑁呭寘鑷甫杩愯鏃讹級 |
-| 璐﹀彿 | 宸插畨瑁呭苟鐧诲綍 WorkBuddy 妗岄潰瀹㈡埛绔?|
-| 瀹㈡埛绔?| Codex銆丆laude Code 鎴?Claude 妗岄潰鐗堬紝鍙€?|
-| 鍛戒护琛岀増 | Node.js 鈮?22.5锛堢敤鍒板唴缃?`node:sqlite` 鍋?cc-switch 淇濇姢锛?|
+| 桌面软件 | Windows 10/11 x64（安装包自带运行时） |
+| 账号 | 已安装并登录 WorkBuddy 桌面客户端 |
+| 客户端 | Codex、Claude Code 或 Claude 桌面版，可选 |
+| 命令行版 | Node.js ≥ 22.5（用到内置 `node:sqlite` 做 cc-switch 保护） |
 
 ---
 
-## 瀹夎锛圵indows 妗岄潰杞欢锛?
-1. 浠?Releases 涓嬭浇 `WorkBuddy-Bridge-Setup-<鐗堟湰>.exe`锛?2. 鍙屽嚮瀹夎锛屽彲鑷€夊畨瑁呯洰褰曪紝浼氬垱寤烘闈㈠拰寮€濮嬭彍鍗曞揩鎹锋柟寮忥紱
-3. 鍚姩銆學orkBuddy Bridge銆嶏紝绐楀彛閲屽氨鏄厤缃晫闈€?
-杞欢鍚姩鍚庣綉鍏宠嚜鍔ㄥ湪鍚庡彴璺戯紝绐楀彛鍏虫帀瀹冪户缁湪绯荤粺鎵樼洏寰呯潃锛堟墭鐩樺浘鏍囧彸閿彲浠ラ噸鏂版墦寮€鐣岄潰鎴栭€€鍑猴級銆?
-### 寮€鏈鸿嚜鍚?
-閰嶇疆鐣岄潰銆岀綉鍏炽€嶅尯鍧楁湁銆屽紑鏈鸿嚜鍚€嶅紑鍏筹紝鍕句笂涔嬪悗鐧诲綍 Windows 鏃惰嚜鍔ㄥ惎鍔ㄧ綉鍏筹紙甯?`--hidden`锛屼笉寮圭獥鍙ｏ級銆?
-### 鑷繁鏋勫缓瀹夎鍖?
+## 安装（Windows 桌面软件）
+
+1. 从 Releases 下载 `WorkBuddy-Bridge-Setup-<版本>.exe`（[v0.1.0](https://github.com/Lingw2/workbuddy-bridge/releases/tag/v0.1.0)）；
+2. 双击安装，可自选安装目录，会创建桌面和开始菜单快捷方式；
+3. 启动「WorkBuddy Bridge」，窗口里就是配置界面。
+
+软件启动后网关自动在后台跑，窗口关掉它继续在系统托盘待着（托盘图标右键可以重新打开界面或退出）。
+
+### 开机自启
+
+配置界面「网关」区块有「开机自启」开关，勾上之后登录 Windows 时自动启动网关（带 `--hidden`，不弹窗口）。
+
+### 自己构建安装包
+
 ```bash
 git clone https://github.com/Lingw2/workbuddy-bridge.git
 cd workbuddy-bridge
 npm install
-npm run dist        # 浜х墿鍦?release/
+npm run dist        # 产物在 release/
 ```
 
-鍥藉唴缃戠粶涓嬭浇 Electron 浜岃繘鍒跺彲鑳藉緢鎱紝鍙互鍔犻暅鍍忥細
+国内网络下载 Electron 二进制可能很慢，可以加镜像：
 
 ```bash
 ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ \
@@ -53,113 +73,153 @@ npm run dist
 
 ---
 
-## 鍛戒护琛岀増
+## 命令行版
 
 ```bash
 git clone https://github.com/Lingw2/workbuddy-bridge.git
 cd workbuddy-bridge
 npm install
 
-node bin/workbuddy-bridge.js ui     # 缃戝叧 + 娴忚鍣ㄦ墦寮€閰嶇疆椤?```
+node bin/workbuddy-bridge.js ui     # 网关 + 浏览器打开配置页
+```
 
-鍏ㄥ眬瀹夎锛?
+全局安装：
+
 ```bash
 npm install -g workbuddy-bridge
 workbuddy-bridge ui
 ```
 
 ```bash
-workbuddy-bridge ui                # 缃戝叧 + 閰嶇疆椤碉紙榛樿锛?workbuddy-bridge start             # 鍙捣缃戝叧
-workbuddy-bridge status            # 鐪嬭繍琛岀姸鎬佸拰閰嶇疆鐘舵€?workbuddy-bridge doctor            # 鑷锛氳处鍙枫€佸鎴风銆侀厤缃€佺綉鍏?workbuddy-bridge models            # 鍒楀嚭璐﹀彿鍙敤鐨勬ā鍨?workbuddy-bridge install           # 鍐欓厤缃紙codex / claude-code / claude-desktop锛?workbuddy-bridge install codex cc-switch
-workbuddy-bridge uninstall         # 绉婚櫎鍐欏叆鐨勯厤缃?```
+workbuddy-bridge ui                # 网关 + 配置页（默认）
+workbuddy-bridge start             # 只起网关
+workbuddy-bridge status            # 看运行状态和配置状态
+workbuddy-bridge doctor            # 自检：账号、客户端、配置、网关
+workbuddy-bridge models            # 列出账号可用的模型
+workbuddy-bridge install           # 写配置（codex / claude-code / claude-desktop）
+workbuddy-bridge install codex cc-switch
+workbuddy-bridge uninstall         # 移除写入的配置
+```
 
-鐜鍙橀噺锛歚WORKBUDDY_BRIDGE_UI_PORT`锛堥厤缃〉绔彛锛岄粯璁?4477锛夈€?
+环境变量：`WORKBUDDY_BRIDGE_UI_PORT`（配置页端口，默认 4477）。
+
 ---
 
-## 閰嶇疆鐣岄潰鑳藉仛浠€涔?
-| 鍖哄潡 | 浣滅敤 |
-| --- | --- |
-| **璐﹀彿** | 鏄剧ず褰撳墠鐧诲綍鎬侊紙鍖哄煙 / 鍩熷悕 / 鏉ユ簮 / 鏈夋晥鏈燂級锛屽垪鍑哄彂鐜扮殑璐﹀彿鏂囦欢锛岀偣銆屽埛鏂版ā鍨嬪垪琛ㄣ€嶉噸鏂版媺鍙栥€?|
-| **瀹㈡埛绔帴鍏?* | 閫愪釜鎴栦竴閿啓鍏?Codex銆丆laude Code銆丆laude 妗岄潰鐗堢殑閰嶇疆銆?|
-| **妯″瀷涓庤矾鐢?* | 閫?Codex / Claude 鐨勯粯璁ゆā鍨嬨€佹帹鐞嗗己搴︼紱缂栬緫 Claude 璺敱琛紙璺敱鍚?鈫?WorkBuddy 妯″瀷銆佹。浣嶃€佹槸鍚﹂粯璁わ級銆?|
-| **缃戝叧** | 鏌ョ湅涓や釜缃戝叧鏄惁鍦ㄨ窇锛屼慨鏀圭鍙ｏ紝鏌ョ湅/澶嶅埗浠ょ墝锛屽紑鏈鸿嚜鍚紑鍏炽€?|
-| **鏃ュ織** | 缃戝叧鏈€杩?200 琛屾棩蹇椼€?|
+## 配置界面能做什么
 
-銆屼竴閿帴鍏ュ叏閮ㄣ€嶄細鍋氫笁浠朵簨锛?
-1. 鍐?`~/.codex/config.toml`锛屽姞涓?`[model_providers.workbuddy]`锛屽苟鎶婇《灞?`model_provider` 鎸囧悜瀹冿紱
-2. 鍐?`~/.claude/settings.json` 鐨?`env` 鍧楋紱
-3. 鍐?Claude 妗岄潰鐗堢殑 3p 閰嶇疆锛坄%LOCALAPPDATA%\Claude-3p\configLibrary\...`锛夈€?
-姣忎竴姝ラ兘浼氬厛鎶婂師鏂囦欢澶嶅埗涓€浠?`.bak-workbuddy-<鏃堕棿鎴?`銆?
+| 区块 | 作用 |
+| --- | --- |
+| **账号** | 显示当前登录态（区域 / 域名 / 来源 / 有效期），列出发现的账号文件，点「刷新模型列表」重新拉取。 |
+| **客户端接入** | 逐个或一键写入 Codex、Claude Code、Claude 桌面版的配置。 |
+| **模型与路由** | 选 Codex / Claude 的默认模型、推理强度；编辑 Claude 路由表（路由名 → WorkBuddy 模型、档位、是否默认）。 |
+| **网关** | 查看两个网关是否在跑，修改端口，查看/复制令牌，开机自启开关。 |
+| **日志** | 网关最近 200 行日志。 |
+
+「一键接入全部」会做三件事：
+
+1. 写 `~/.codex/config.toml`，加上 `[model_providers.workbuddy]`，并把顶层 `model_provider` 指向它；
+2. 写 `~/.claude/settings.json` 的 `env` 块；
+3. 写 Claude 桌面版的 3p 配置（`%LOCALAPPDATA%\Claude-3p\configLibrary\...`）。
+
+每一步都会先把原文件复制一份 `.bak-workbuddy-<时间戳>`。
+
 ---
 
-## 宸ヤ綔鍘熺悊
+## 工作原理
 
-### 1. 鍑嵁浠庡摢鏉?
-鎸夐『搴忔壘杩欎簺浣嶇疆锛屾壘鍒扮涓€涓彲鐢ㄧ殑锛?
-| 浣嶇疆 | 璇存槑 |
+### 1. 凭据从哪来
+
+按顺序找这些位置，找到第一个可用的：
+
+| 位置 | 说明 |
 | --- | --- |
-| `~/.workbuddy-bridge/session.json` | 鏈伐鍏疯嚜宸辩殑缂撳瓨 |
-| `%LOCALAPPDATA%\CodeBuddyExtension\Data\Public\auth\workbuddy-desktop.info` | WorkBuddy 妗岄潰绔櫥褰曟€?|
-| `~/.dsh/workbuddy-vault/cn/*.json` | dsh 鎻掍欢鐨勫嚟鎹簱锛堜腑鍥界珯锛?|
-| `~/.dsh/workbuddy-vault/global/*.json` | dsh 鎻掍欢鐨勫嚟鎹簱锛堝浗闄呯珯锛?|
+| `~/.workbuddy-bridge/session.json` | 本工具自己的缓存 |
+| `%LOCALAPPDATA%\CodeBuddyExtension\Data\Public\auth\workbuddy-desktop.info` | WorkBuddy 桌面端登录态 |
+| `~/.dsh/workbuddy-vault/cn/*.json` | dsh 插件的凭据库（中国站） |
+| `~/.dsh/workbuddy-vault/global/*.json` | dsh 插件的凭据库（国际站） |
 
-鎷垮埌 `accessToken` / `refreshToken` 鍚庯紝Token 蹇繃鏈熸椂璋冪敤 `POST {chatBase}/v2/plugin/auth/token/refresh` 缁湡锛屽苟鎶婃柊 Token 鍐欏洖缂撳瓨銆?
-### 2. 妯″瀷鐩綍
+拿到 `accessToken` / `refreshToken` 后，Token 快过期时调用 `POST {chatBase}/v2/plugin/auth/token/refresh` 续期，并把新 Token 写回缓存。
 
-`GET {configBase}/v3/config` 鎷垮埌瀹屾暣鐩綍锛屽啀浠?`agents[name="cli"]` 閲屽彇鍑?CLI 鍙敤鐨勯偅鎵规ā鍨嬨€備腑鍥界珯鍦?`/v3/config` 澶辫触鏃跺洖钀藉埌 `/v2/enterprises/personal/models`銆?
-### 3. 鍗忚杞崲
+### 2. 模型目录
 
-- **Responses 鈫?chat**锛歚input[]` 閲岀殑 `message` / `function_call` / `function_call_output` 杩樺師鎴?chat 鐨?`messages`锛宍tools[]`锛堟墎骞筹級杞垚宓屽鐨?`{type:'function',function:{...}}`銆?- **chat 鈫?Responses**锛氫笂娓?SSE 鐨?`delta.content` / `delta.tool_calls` / `delta.reasoning_content` 缈昏瘧鎴?`response.output_text.delta` / `response.function_call_arguments.delta` / `response.reasoning_summary_text.delta` 绛変簨浠躲€?- **Messages 鈫?chat**锛欰nthropic 鐨?`system` 鏁扮粍銆乣content` typed blocks銆乣tool_use` / `tool_result`銆乣thinking` 鍧椾笌 chat 浜掕浆銆?
-### 4. 涓婃父 channel gate
+`GET {configBase}/v3/config` 拿到完整目录，再从 `agents[name="cli"]` 里取出 CLI 可用的那批模型。中国站在 `/v3/config` 失败时回落到 `/v2/enterprises/personal/models`。
 
-WorkBuddy 涓婃父浼氭鏌?`system` / `assistant` 娑堟伅鐨勬帾杈烇紝鍛戒腑鍒殑 agent 鐨勮韩浠界壒寰佸氨杩斿洖 `11128`銆傚疄娴嬩笅鏉ワ細
+### 3. 协议转换
 
-- 鍖归厤鏄?*澶у皬鍐欎笉鏁忔劅鐨勪换鎰忎綅缃瓙涓插尮閰?*锛屼笉鏄墠缂€鍖归厤锛?- 涓婃父浼氬厛瑙勮寖鍖栦笉鍙瀛楃锛屾墍浠ユ彃闆跺绌烘牸娌＄敤锛屽繀椤荤湡鐨勬敼鎺緸锛?- 涓€鏉℃彁绀洪噷鍙兘鍛戒腑澶氬锛岃€屼笖鏈変簺鍛戒腑鏄€屼袱娈垫嫾鍦ㄤ竴璧枫€嶆墠绠楀懡涓€?
-Claude Code 鐨勭郴缁熸彁绀洪噷鏈変袱澶勪細琚嫆锛屽伐鍏峰湪杞彂鍓嶈嚜鍔ㄦ敼鍐欙細
+- **Responses → chat**：`input[]` 里的 `message` / `function_call` / `function_call_output` 还原成 chat 的 `messages`，`tools[]`（扁平）转成嵌套的 `{type:'function',function:{...}}`。
+- **chat → Responses**：上游 SSE 的 `delta.content` / `delta.tool_calls` / `delta.reasoning_content` 翻译成 `response.output_text.delta` / `response.function_call_arguments.delta` / `response.reasoning_summary_text.delta` 等事件。
+- **Messages ↔ chat**：Anthropic 的 `system` 数组、`content` typed blocks、`tool_use` / `tool_result`、`thinking` 块与 chat 互转。
 
-| 鍘熸枃 | 鏀瑰啓鍚?|
+### 4. 上游 channel gate
+
+WorkBuddy 上游会检查 `system` / `assistant` 消息的措辞，命中别的 agent 的身份特征就返回 `11128`。实测下来：
+
+- 匹配是**大小写不敏感的任意位置子串匹配**，不是前缀匹配；
+- 上游会先规范化不可见字符，所以插零宽空格没用，必须真的改措辞；
+- 一条提示里可能命中多处，而且有些命中是「两段拼在一起」才算命中。
+
+Claude Code 的系统提示里有两处会被拒，工具在转发前自动改写：
+
+| 原文 | 改写后 |
 | --- | --- |
 | `x-anthropic-billing-header:` | `x-request-metadata:` |
 | `To give feedback, users should report the issue at https://github.com/anthropics/claude-code/issues` | `To give feedback, users should report the issue to the project maintainers` |
 
-瑙勫垯鍦?`src/gateway/rewrite.js`锛屾敼涓婃父鎴栨崲瀹㈡埛绔増鏈椂鎸夐渶澧炲噺銆?
+规则在 `src/gateway/rewrite.js`，改上游或换客户端版本时按需增减。
+
 ---
 
-## 閰嶇疆鍐欏湪鍝?
-| 瀹㈡埛绔?| 鏂囦欢 |
+## 配置写在哪
+
+| 客户端 | 文件 |
 | --- | --- |
-| Codex | `~/.codex/config.toml`銆乣~/.codex/cc-switch-model-catalog.json` |
+| Codex | `~/.codex/config.toml`、`~/.codex/cc-switch-model-catalog.json` |
 | Claude Code | `~/.claude/settings.json` |
-| Claude 妗岄潰鐗?| `%LOCALAPPDATA%\Claude-3p\configLibrary\00000000-0000-4000-8000-000000157210.json` |
-| cc-switch | `~/.cc-switch/cc-switch.db`锛坧rovider 琛級銆乣~/.cc-switch/settings.json`銆乣~/.cc-switch/live-state.json` |
-| 鏈伐鍏?| `~/.workbuddy-bridge/config.json`銆乣~/.workbuddy-bridge/session.json` |
+| Claude 桌面版 | `%LOCALAPPDATA%\Claude-3p\configLibrary\00000000-0000-4000-8000-000000157210.json` |
+| cc-switch | `~/.cc-switch/cc-switch.db`（provider 表）、`~/.cc-switch/settings.json`、`~/.cc-switch/live-state.json` |
+| 本工具 | `~/.workbuddy-bridge/config.json`、`~/.workbuddy-bridge/session.json` |
 
-妗岄潰杞欢鍜屽懡浠よ鐗堣鍐欑殑鏄悓涓€浠芥枃浠讹紝涓よ竟鍙互娣风敤銆?
+桌面软件和命令行版读写的是同一份文件，两边可以混用。
+
 ---
 
-## 宸茬煡闄愬埗
+## 已知限制
 
-- **鍙敮鎸?WorkBuddy 妗岄潰绔殑鐧诲綍鎬?*銆傞渶瑕佸厛鍦?WorkBuddy 瀹㈡埛绔噷鐧诲綍涓€娆°€?- **Codex 0.163.0 鍙敮鎸?Responses API**銆俙wire_api = "chat"` 宸茶瀹樻柟绉婚櫎锛屽伐鍏峰洜姝よ嚜宸卞疄鐜颁簡 `/v1/responses`銆?- **Claude 妗岄潰鐗堢殑 `inferenceModels` 蹇呴』鏄?`claude-*` 褰㈠紡**锛屾闈㈢増浼氭嫆缁濆惈 `deepseek` / `glm` / `kimi` / `gpt` 绛夊瓧鏍风殑 id銆?- **cc-switch 蹇呴』鍦ㄩ€€鍑虹姸鎬佷笅鎵嶈兘鍐欏畠鐨勬暟鎹簱**銆傝窇鐫€鐨勬椂鍊欏伐鍏蜂細璺宠繃杩欎竴姝ュ苟鎻愮ず銆?- **瀹夎鍖呮病鏈変唬鐮佺鍚?*锛學indows SmartScreen 鍙兘鎻愮ず鏈煡鍙戝竷鑰呫€?- 宸ュ叿璇诲啓鐨勬槸鍒汉鐨勮处鍙锋暟鎹紝鐢ㄥ湪鍝効銆佹€庝箞鐢紝璇疯嚜宸卞垽鏂€?
+- **只支持 WorkBuddy 桌面端的登录态**。需要先在 WorkBuddy 客户端里登录一次。
+- **Codex 0.163.0 只支持 Responses API**。`wire_api = "chat"` 已被官方移除，工具因此自己实现了 `/v1/responses`。
+- **Claude 桌面版的 `inferenceModels` 必须是 `claude-*` 形式**，桌面版会拒绝含 `deepseek` / `glm` / `kimi` / `gpt` 等字样的 id。
+- **cc-switch 必须在退出状态下才能写它的数据库**。跑着的时候工具会跳过这一步并提示。
+- **安装包没有代码签名**，Windows SmartScreen 可能提示未知发布者。
+- 工具读写的是别人的账号数据，用在哪儿、怎么用，请自己判断。
+
 ---
 
-## 寮€鍙?
+## 开发
+
 ```bash
-npm test                   # 鍗忚杞崲鐨勫崟鍏冩祴璇?npm run smoke              # 瀵圭潃鐪熷疄缃戝叧璺戜竴杞鍒扮
-npm run desktop            # 寮€鍙戞ā寮忓惎鍔ㄦ闈㈣蒋浠?npm run icon               # 閲嶆柊鐢熸垚鍥炬爣
+npm test                   # 协议转换的单元测试
+npm run smoke              # 对着真实网关跑一轮端到端
+npm run desktop            # 开发模式启动桌面软件
+npm run icon               # 重新生成图标
 node bin/workbuddy-bridge.js doctor
 ```
 
-鐩綍缁撴瀯锛?
-```
-bin/            CLI 鍏ュ彛
-desktop/        Electron 妗岄潰澶栧３锛氱獥鍙ｃ€佹墭鐩樸€佸紑鏈鸿嚜鍚?src/app.js      搴旂敤瀹瑰櫒锛氱綉鍏炽€佹ā鍨嬨€乁I
-src/upstream/   WorkBuddy 涓婃父锛氬嚟鎹€佹ā鍨嬬洰褰曘€丼SE
-src/gateway/    鍗忚杞崲灞傦細Anthropic / Responses / 鏀瑰啓
-src/config/     瀹㈡埛绔厤缃鍐欙細Codex / Claude / cc-switch / TOML
-src/ui/         閰嶇疆椤碉紙鍘熺敓 HTML + JS锛屾棤鏋勫缓姝ラ锛?test/           娴嬭瘯
-tools/          鍥炬爣鐢熸垚銆佹埅鍥俱€佽瘖鏂剼鏈?```
+目录结构：
 
-鍥炬爣鏄剼鏈敾鍑烘潵鐨勶紙`tools/make-icon.mjs`锛屾墜鍐?PNG 缂栫爜鍣級锛屼粨搴撻噷涓嶆斁浜岃繘鍒剁礌鏉愶紝鏀归厤鑹查噸璺戣剼鏈嵆鍙€?
+```
+bin/            CLI 入口
+desktop/        Electron 桌面外壳：窗口、托盘、开机自启
+src/app.js      应用容器：网关、模型、UI
+src/upstream/   WorkBuddy 上游：凭据、模型目录、SSE
+src/gateway/    协议转换层：Anthropic / Responses / 改写
+src/config/     客户端配置读写：Codex / Claude / cc-switch / TOML
+src/ui/         配置页（原生 HTML + JS，无构建步骤）
+test/           测试
+tools/          图标生成、截图、诊断脚本
+```
+
+图标是脚本画出来的（`tools/make-icon.mjs`，手写 PNG 编码器），仓库里不放二进制素材，改配色重跑脚本即可。
+
 ## License
 
-MIT锛岃 [LICENSE](LICENSE)銆?
+MIT，见 [LICENSE](LICENSE)。
