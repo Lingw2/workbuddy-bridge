@@ -62,7 +62,7 @@ Windows 上是一个**桌面软件**：装完双击打开，配置界面在窗�
 
 ## 安装（Windows 桌面软件）
 
-1. 从 Releases 下载 `WorkBuddy-Bridge-Setup-<版本>.exe`（[v0.4.0](https://github.com/Lingw2/workbuddy-bridge/releases/tag/v0.4.0)）；
+1. 从 Releases 下载 `WorkBuddy-Bridge-Setup-<版本>.exe`（[v0.4.1](https://github.com/Lingw2/workbuddy-bridge/releases/tag/v0.4.1)）；
 2. 双击安装，可自选安装目录，会创建桌面和开始菜单快捷方式；
 3. 启动「WorkBuddy Bridge」，窗口里就是配置界面。
 
