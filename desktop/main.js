@@ -19,15 +19,28 @@ let tray = null
 let bridge = null
 /** Set when a second launch asked the running instance to show its window. */
 let showRequested = false
+/** Set while the application is shutting down, so the window may really close. */
+let isQuitting = false
+/** Set once the gateway has been stopped, so the quit can finish. */
+let bridgeStopped = false
 
 /**
  * Only one instance may own the gateway ports.
  *
  * A second launch hands its request to the first one and exits, so the user
  * can double-click the shortcut as often as they like.
+ *
+ * The lock has to be taken before anything else, and losing it has to stop
+ * the bootstrap completely: a second instance would otherwise open a window
+ * that points at the first instance's UI server and then vanish when the
+ * quit takes effect, which looks like a window that flashes and hides.
  */
-if (!app.requestSingleInstanceLock()) {
-  app.quit()
+const isPrimaryInstance = app.requestSingleInstanceLock()
+
+if (!isPrimaryInstance) {
+  // Leave immediately. `app.quit()` alone still lets the ready handler run,
+  // which is what made the second launch flash a window before it vanished.
+  app.exit(0)
 } else {
   app.on('second-instance', () => {
     showRequested = true
@@ -96,6 +109,14 @@ function createWindow() {
     }
   })
 
+  mainWindow.on('close', (event) => {
+    // Closing the window keeps the gateway alive in the tray, so the window
+    // is only hidden. During a real quit the window has to go away.
+    if (isQuitting) return
+    event.preventDefault()
+    mainWindow.hide()
+  })
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -131,8 +152,9 @@ function createTray() {
     ]),
   )
   tray.on('click', () => {
-    if (mainWindow?.isVisible()) mainWindow.hide()
-    else revealWindow()
+    // Always bring the window up. Toggling it away on the same click that
+    // opened it made the interface look like it flashed and hid itself.
+    revealWindow()
   })
 }
 
@@ -190,6 +212,11 @@ function createMenu() {
 }
 
 app.whenReady().then(async () => {
+  // A second launch already handed its request to the running instance and
+  // asked to quit. Starting the bridge and opening a window here would flash
+  // a window that belongs to the first instance and then disappear.
+  if (!isPrimaryInstance) return
+
   try {
     await startBridge()
   } catch (error) {
@@ -209,12 +236,17 @@ app.on('window-all-closed', () => {
   // Stay resident in the tray; the gateway has to keep serving.
 })
 
-app.on('before-quit', async () => {
-  if (bridge) {
+app.on('before-quit', async (event) => {
+  if (isQuitting) return
+  isQuitting = true
+  event.preventDefault()
+  if (bridge && !bridgeStopped) {
     try {
       await bridge.stop()
+      bridgeStopped = true
     } catch {
       /* ignore */
     }
   }
+  app.quit()
 })
